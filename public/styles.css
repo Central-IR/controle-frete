@@ -770,3 +770,288 @@ tbody tr.cancelada {
         width: 100%;
     }
 }
+
+/* ============================================
+   ESTILOS ADICIONAIS PARA MODAIS E MELHORIAS
+   ============================================ */
+
+/* Modal - Estados de visibilidade */
+.modal-overlay {
+    display: none;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+/* Mensagem no modal de confirmação */
+.modal-message {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+/* Melhorias visuais para mensagens de status */
+.status-message {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.status-message::before {
+    content: '';
+    width: 4px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: currentColor;
+    border-radius: 8px 0 0 8px;
+}
+
+/* Efeito hover nos cards do dashboard */
+.dashboard-card {
+    cursor: default;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Melhorias na tabela responsiva */
+@media (max-width: 1200px) {
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+        min-width: 1000px;
+    }
+}
+
+/* Scroll suave nos modais */
+.modal-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--bg-card);
+}
+
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: var(--bg-card);
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-light);
+}
+
+/* Melhoria no foco dos inputs */
+input:focus,
+select:focus,
+textarea:focus {
+    box-shadow: 0 0 0 3px rgba(204, 112, 0, 0.1);
+}
+
+/* Efeito nos botões de ação */
+.actions button {
+    transition: all 0.2s ease;
+    transform: scale(1);
+}
+
+.actions button:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+
+.actions button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+/* Indicador de loading */
+.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Melhorias para telas muito pequenas */
+@media (max-width: 480px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-card .value {
+        font-size: 1.8rem;
+    }
+    
+    .month-selector {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .month-selector button {
+        width: 100%;
+    }
+    
+    .actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .actions button {
+        width: 100%;
+        margin: 0 0 0.5rem 0;
+    }
+}
+
+/* Efeito de destaque ao adicionar novo item */
+@keyframes highlight {
+    0% {
+        background-color: rgba(204, 112, 0, 0.3);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+tbody tr.new-item {
+    animation: highlight 2s ease;
+}
+
+/* Melhorias no badge */
+.badge {
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+/* Ajuste para o close button do modal */
+.close-modal {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.close-modal:hover {
+    background: rgba(255, 0, 0, 0.1);
+    color: #EF4444;
+    transform: rotate(90deg);
+}
+
+/* Transições suaves para o modal */
+.modal-overlay {
+    transition: opacity 0.2s ease;
+}
+
+.modal-content {
+    transition: transform 0.2s ease;
+}
+
+/* Melhorias no formulário */
+.form-group label {
+    transition: color 0.2s ease;
+}
+
+.form-group input:focus + label,
+.form-group select:focus + label,
+.form-group textarea:focus + label {
+    color: var(--primary);
+}
+
+/* Estado de erro em inputs */
+input.error,
+select.error,
+textarea.error {
+    border-color: #EF4444;
+}
+
+input.error:focus,
+select.error:focus,
+textarea.error:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Placeholder styling */
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+/* Botões desabilitados - melhoria visual */
+button:disabled {
+    cursor: not-allowed;
+    filter: grayscale(50%);
+}
+
+/* Melhoria na responsividade dos modais */
+@media (max-width: 768px) {
+    .modal-content {
+        max-height: 85vh;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Transição suave entre temas */
+* {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease;
+}
+
+/* Exceções de transição para elementos específicos */
+button, 
+.modal-overlay,
+.modal-content {
+    transition: all 0.2s ease;
+}
+
+/* Foco visível para acessibilidade */
+*:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Remove outline padrão mas mantém para teclado */
+*:focus:not(:focus-visible) {
+    outline: none;
+}
