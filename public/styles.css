@@ -47,6 +47,19 @@
     }
 }
 
+/* ============================================
+   CONTROLE DE VISIBILIDADE DOS MODAIS
+   ============================================ */
+
+/* CRÍTICO: Modais devem começar escondidos */
+.modal-overlay {
+    display: none !important;
+}
+
+.modal-overlay.show {
+    display: flex !important;
+}
+
 * {
     margin: 0;
     padding: 0;
