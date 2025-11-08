@@ -16,6 +16,7 @@ let currentFreteIdForObs = null;
 let sessionToken = null;
 let sessionCheckInterval = null;
 let pollingInterval = null;
+let currentFilter = 'all'; // Filtro ativo pelos cards do dashboard
 
 console.log('API URL configurada:', API_URL);
 
@@ -75,7 +76,22 @@ function iniciarAplicacao() {
     updateMonthDisplay();
     startSessionCheck();
     startPolling();
+    updateConnectionStatus(true);
     document.getElementById('freteForm').addEventListener('submit', handleSubmit);
+}
+
+// ==========================================
+// ======== STATUS DE CONEXÃO ===============
+// ==========================================
+function updateConnectionStatus(isOnline) {
+    const statusDiv = document.getElementById('connectionStatus');
+    if (statusDiv) {
+        statusDiv.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
+        statusDiv.innerHTML = `
+            <span class="status-dot"></span>
+            <span>${isOnline ? 'Online' : 'Offline'}</span>
+        `;
+    }
 }
 
 // ==========================================
@@ -104,8 +120,9 @@ function startSessionCheck() {
             }
         } catch (error) {
             console.error('Erro ao verificar sessão:', error);
+            updateConnectionStatus(false);
         }
-    }, 30000); // Verifica a cada 30 segundos
+    }, 30000);
 }
 
 // ==========================================
@@ -117,7 +134,7 @@ function startPolling() {
     }
 
     pollingInterval = setInterval(() => {
-        loadFretes(true); // true = silent mode (sem mensagens)
+        loadFretes(true);
     }, POLLING_INTERVAL);
 }
 
@@ -126,11 +143,11 @@ function startPolling() {
 // ==========================================
 function mostrarTelaAcessoNegado(mensagem = 'Somente usuários autenticados podem acessar esta área') {
     document.body.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-secondary); font-family: 'Inter', sans-serif;">
-            <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 24px; box-shadow: 0 20px 60px var(--shadow); max-width: 500px; border: 1px solid var(--border-color);">
-                <h1 style="font-size: 1.8rem; color: var(--text-primary); margin-bottom: 1rem;">NÃO AUTORIZADO</h1>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">${mensagem}</p>
-                <button onclick="voltarParaLogin()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 8px 24px rgba(204, 112, 0, 0.4); transition: all 0.2s;">
+        <div class="unauthorized-screen">
+            <div class="unauthorized-content">
+                <h1 class="unauthorized-title">NÃO AUTORIZADO</h1>
+                <p class="unauthorized-message">${mensagem}</p>
+                <button onclick="voltarParaLogin()" class="unauthorized-button">
                     Ir para o Login
                 </button>
             </div>
@@ -165,15 +182,46 @@ async function loadFretes(silent = false) {
 
         if (!response.ok) throw new Error('Erro ao carregar fretes');
         
+        updateConnectionStatus(true);
+        
         fretes = await response.json();
         allFretes = [...fretes];
-        renderFretes(fretes);
+        
+        // Verificar atrasos apenas na primeira carga
+        if (!silent) {
+            verificarAtrasos();
+        }
+        
+        applyCurrentFilter();
         updateDashboard();
     } catch (error) {
         console.error('Erro:', error);
+        updateConnectionStatus(false);
         if (!silent) {
             showMessage('Erro ao conectar com o servidor: ' + error.message, 'error');
         }
+    }
+}
+
+// Verificar mercadorias em atraso
+function verificarAtrasos() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    const atrasados = fretes.filter(frete => {
+        if (frete.entregue || frete.status_especial) return false;
+        const dataEntrega = new Date(frete.data_entrega + 'T00:00:00');
+        return dataEntrega < hoje;
+    });
+
+    if (atrasados.length > 0) {
+        showSystemMessage({
+            icon: '⚠️',
+            title: 'ATENÇÃO',
+            message: `Existem ${atrasados.length} mercadoria${atrasados.length > 1 ? 's' : ''} com entrega em atraso.`,
+            confirmText: 'Entendi',
+            type: 'warning'
+        });
     }
 }
 
@@ -203,6 +251,46 @@ function changeMonth(delta) {
     }
     updateMonthDisplay();
     loadFretes();
+}
+
+// Filtrar por card do dashboard
+function filterByDashboard(filterType) {
+    currentFilter = filterType;
+    applyCurrentFilter();
+}
+
+// Aplicar filtro atual
+function applyCurrentFilter() {
+    let filtered = [...allFretes];
+    
+    // Filtro por card do dashboard
+    if (currentFilter === 'entregue') {
+        filtered = filtered.filter(f => f.entregue);
+    } else if (currentFilter === 'em-transito') {
+        filtered = filtered.filter(f => !f.entregue && getStatus(f) === 'Em Trânsito');
+    } else if (currentFilter === 'fora-prazo') {
+        filtered = filtered.filter(f => !f.entregue && getStatus(f) === 'Fora do Prazo');
+    }
+    
+    // Filtros adicionais
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    const vendedorFilter = document.getElementById('filterVendedor').value;
+    const transportadoraFilter = document.getElementById('filterTransportadora').value;
+
+    filtered = filtered.filter(frete => {
+        const matchSearch = 
+            frete.numero_nf.toLowerCase().includes(searchTerm) ||
+            frete.orgao.toLowerCase().includes(searchTerm) ||
+            frete.destino.toLowerCase().includes(searchTerm) ||
+            (frete.numero_documento && frete.numero_documento.toLowerCase().includes(searchTerm));
+
+        const matchVendedor = !vendedorFilter || frete.vendedor === vendedorFilter;
+        const matchTransportadora = !transportadoraFilter || frete.transportadora === transportadoraFilter;
+
+        return matchSearch && matchVendedor && matchTransportadora;
+    });
+
+    renderFretes(filtered);
 }
 
 // Abrir modal de formulário
@@ -248,7 +336,7 @@ function closeFormModal() {
     setTodayDate();
 }
 
-// Submeter formulário
+// Submeter formulário com feedback instantâneo
 async function handleSubmit(e) {
     e.preventDefault();
     
@@ -269,6 +357,15 @@ async function handleSubmit(e) {
         status_especial: document.getElementById('statusEspecial').value || null
     };
 
+    // Feedback instantâneo
+    closeFormModal();
+    showSystemMessage({
+        icon: '⏳',
+        title: 'PROCESSANDO',
+        message: editId ? 'Atualizando registro...' : 'Criando novo registro...',
+        autoClose: false
+    });
+
     try {
         let response;
         if (editId) {
@@ -280,7 +377,6 @@ async function handleSubmit(e) {
                 },
                 body: JSON.stringify(freteData)
             });
-            showMessage('Registro atualizado com sucesso!', 'success');
         } else {
             response = await fetch(`${API_URL}/fretes`, {
                 method: 'POST',
@@ -290,10 +386,10 @@ async function handleSubmit(e) {
                 },
                 body: JSON.stringify(freteData)
             });
-            showMessage('Registro cadastrado com sucesso!', 'success');
         }
 
         if (response.status === 401) {
+            closeSystemMessage();
             sessionStorage.removeItem('controleFreteSessao');
             mostrarTelaAcessoNegado('Sua sessão expirou');
             return;
@@ -301,16 +397,42 @@ async function handleSubmit(e) {
 
         if (!response.ok) throw new Error('Erro ao salvar');
 
-        await loadFretes();
-        closeFormModal();
+        closeSystemMessage();
+        showSystemMessage({
+            icon: '✓',
+            title: 'SUCESSO',
+            message: editId ? 'Registro atualizado com sucesso!' : 'Registro criado com sucesso!',
+            confirmText: 'OK',
+            type: 'success'
+        });
+
+        // Atualizar dados em background
+        loadFretes(true);
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao salvar registro', 'error');
+        closeSystemMessage();
+        showSystemMessage({
+            icon: '✕',
+            title: 'ERRO',
+            message: 'Não foi possível salvar o registro. Tente novamente.',
+            confirmText: 'OK',
+            type: 'error'
+        });
     }
 }
 
-// Toggle entregue
+// Toggle entregue com feedback instantâneo
 async function toggleEntregue(id) {
+    const frete = fretes.find(f => f.id === id);
+    if (!frete) return;
+
+    const novoStatus = !frete.entregue;
+    
+    // Atualização otimista da UI
+    frete.entregue = novoStatus;
+    applyCurrentFilter();
+    updateDashboard();
+
     try {
         const response = await fetch(`${API_URL}/fretes/${id}/toggle-entregue`, {
             method: 'PATCH',
@@ -327,32 +449,43 @@ async function toggleEntregue(id) {
 
         if (!response.ok) throw new Error('Erro ao atualizar');
 
-        const updatedFrete = await response.json();
-        showMessage(
-            updatedFrete.entregue ? 'Entrega confirmada!' : 'Entrega desmarcada',
-            'success'
-        );
-
-        await loadFretes();
+        // Sincronizar com servidor
+        await loadFretes(true);
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao atualizar status', 'error');
+        // Reverter mudança em caso de erro
+        frete.entregue = !novoStatus;
+        applyCurrentFilter();
+        updateDashboard();
+        showSystemMessage({
+            icon: '✕',
+            title: 'ERRO',
+            message: 'Não foi possível atualizar o status. Tente novamente.',
+            confirmText: 'OK',
+            type: 'error'
+        });
     }
 }
 
 // Deletar frete
 async function deleteFrete(id) {
-    const confirmed = await showConfirm(
-        'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.',
-        {
-            title: 'Excluir Registro',
-            confirmText: 'Excluir',
-            cancelText: 'Cancelar',
-            type: 'warning'
-        }
-    );
+    const confirmed = await showSystemConfirm({
+        icon: '⚠️',
+        title: 'CONFIRMAR EXCLUSÃO',
+        message: 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        type: 'warning'
+    });
 
     if (!confirmed) return;
+
+    showSystemMessage({
+        icon: '⏳',
+        title: 'PROCESSANDO',
+        message: 'Excluindo registro...',
+        autoClose: false
+    });
 
     try {
         const response = await fetch(`${API_URL}/fretes/${id}`, {
@@ -363,6 +496,7 @@ async function deleteFrete(id) {
         });
 
         if (response.status === 401) {
+            closeSystemMessage();
             sessionStorage.removeItem('controleFreteSessao');
             mostrarTelaAcessoNegado('Sua sessão expirou');
             return;
@@ -370,59 +504,116 @@ async function deleteFrete(id) {
 
         if (!response.ok) throw new Error('Erro ao excluir');
 
-        showMessage('Registro excluído com sucesso!', 'success');
-        await loadFretes();
+        closeSystemMessage();
+        showSystemMessage({
+            icon: '✓',
+            title: 'SUCESSO',
+            message: 'Registro excluído com sucesso!',
+            confirmText: 'OK',
+            type: 'success'
+        });
+
+        await loadFretes(true);
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao excluir registro', 'error');
+        closeSystemMessage();
+        showSystemMessage({
+            icon: '✕',
+            title: 'ERRO',
+            message: 'Não foi possível excluir o registro. Tente novamente.',
+            confirmText: 'OK',
+            type: 'error'
+        });
     }
 }
 
-// Modal de confirmação
-function showConfirm(message, options = {}) {
+// Modal de mensagem do sistema
+function showSystemMessage(options) {
+    const {
+        icon = 'ℹ️',
+        title = 'AVISO',
+        message = '',
+        confirmText = 'OK',
+        type = 'info',
+        autoClose = true
+    } = options;
+
+    // Remover mensagem anterior se existir
+    closeSystemMessage();
+
+    const messageHTML = `
+        <div class="system-message-backdrop" id="systemMessageBackdrop"></div>
+        <div class="system-message" id="systemMessage">
+            <div class="system-message-icon">${icon}</div>
+            <div class="system-message-title">${title}</div>
+            <div class="system-message-text">${message}</div>
+            ${autoClose !== false ? `
+                <div class="system-message-actions">
+                    <button class="${type === 'error' ? 'danger' : 'primary'}" id="systemMessageBtn">${confirmText}</button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', messageHTML);
+
+    if (autoClose !== false) {
+        const btn = document.getElementById('systemMessageBtn');
+        btn.addEventListener('click', closeSystemMessage);
+    }
+}
+
+// Fechar mensagem do sistema
+function closeSystemMessage() {
+    const message = document.getElementById('systemMessage');
+    const backdrop = document.getElementById('systemMessageBackdrop');
+    
+    if (message) message.remove();
+    if (backdrop) backdrop.remove();
+}
+
+// Modal de confirmação do sistema
+function showSystemConfirm(options) {
     return new Promise((resolve) => {
         const {
-            title = 'Confirmação',
+            icon = '❓',
+            title = 'CONFIRMAÇÃO',
+            message = '',
             confirmText = 'Confirmar',
             cancelText = 'Cancelar',
             type = 'warning'
         } = options;
 
-        const modalHTML = `
-            <div class="modal-overlay" id="confirmModal">
-                <div class="modal-content" style="max-width: 450px;">
-                    <div class="modal-header">
-                        <h3 class="modal-title">${title}</h3>
-                    </div>
-                    <p class="modal-message">${message}</p>
-                    <div class="modal-actions">
-                        <button class="secondary" id="modalCancelBtn">${cancelText}</button>
-                        <button class="${type === 'warning' ? 'danger' : 'primary'}" id="modalConfirmBtn">${confirmText}</button>
-                    </div>
+        const confirmHTML = `
+            <div class="system-message-backdrop" id="systemConfirmBackdrop"></div>
+            <div class="system-message" id="systemConfirm">
+                <div class="system-message-icon">${icon}</div>
+                <div class="system-message-title">${title}</div>
+                <div class="system-message-text">${message}</div>
+                <div class="system-message-actions">
+                    <button class="secondary" id="systemCancelBtn">${cancelText}</button>
+                    <button class="${type === 'warning' ? 'danger' : 'primary'}" id="systemConfirmBtn">${confirmText}</button>
                 </div>
             </div>
         `;
 
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        document.body.insertAdjacentHTML('beforeend', confirmHTML);
 
-        const modal = document.getElementById('confirmModal');
-        const confirmBtn = document.getElementById('modalConfirmBtn');
-        const cancelBtn = document.getElementById('modalCancelBtn');
+        const confirmBtn = document.getElementById('systemConfirmBtn');
+        const cancelBtn = document.getElementById('systemCancelBtn');
+        const backdrop = document.getElementById('systemConfirmBackdrop');
 
-        const closeModal = (result) => {
-            modal.style.animation = 'fadeOut 0.2s ease forwards';
-            setTimeout(() => {
-                modal.remove();
-                resolve(result);
-            }, 200);
+        const closeConfirm = (result) => {
+            const message = document.getElementById('systemConfirm');
+            const backdrop = document.getElementById('systemConfirmBackdrop');
+            if (message) message.remove();
+            if (backdrop) backdrop.remove();
+            resolve(result);
         };
 
-        confirmBtn.addEventListener('click', () => closeModal(true));
-        cancelBtn.addEventListener('click', () => closeModal(false));
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal(false);
-        });
+        confirmBtn.addEventListener('click', () => closeConfirm(true));
+        cancelBtn.addEventListener('click', () => closeConfirm(false));
+        backdrop.addEventListener('click', () => closeConfirm(false));
     });
 }
 
@@ -533,8 +724,7 @@ function renderFretes(fretesArray) {
                     <div class="actions">
                         <button class="small" onclick="openInfoModal('${frete.id}')">Ver</button>
                         <button class="edit small" onclick="openFormModal('${frete.id}')">Editar</button>
-                        <button class="small" onclick="openObservacoesModal('${frete.id}')" style="background: #F59E0B; border: none;" title="Observações">⚠️</button>
-                        <button class="danger small" onclick="deleteFrete('${frete.id}')">Excluir</button>
+                        <button class="obs-btn small" onclick="openObservacoesModal('${frete.id}')" title="Observações">⚠️</button>
                     </div>
                 </td>
             </tr>
@@ -553,31 +743,12 @@ function updateDashboard() {
     document.getElementById('totalEmRota').textContent = emRota;
 }
 
-// Filtrar fretes
+// Filtrar fretes (sem filtro de status)
 function filterFretes() {
-    const searchTerm = document.getElementById('search').value.toLowerCase();
-    const vendedorFilter = document.getElementById('filterVendedor').value;
-    const transportadoraFilter = document.getElementById('filterTransportadora').value;
-    const statusFilter = document.getElementById('filterStatus').value;
-
-    const filtered = allFretes.filter(frete => {
-        const matchSearch = 
-            frete.numero_nf.toLowerCase().includes(searchTerm) ||
-            frete.orgao.toLowerCase().includes(searchTerm) ||
-            frete.destino.toLowerCase().includes(searchTerm) ||
-            (frete.numero_documento && frete.numero_documento.toLowerCase().includes(searchTerm));
-
-        const matchVendedor = !vendedorFilter || frete.vendedor === vendedorFilter;
-        const matchTransportadora = !transportadoraFilter || frete.transportadora === transportadoraFilter;
-        const matchStatus = !statusFilter || getStatus(frete) === statusFilter;
-
-        return matchSearch && matchVendedor && matchTransportadora && matchStatus;
-    });
-
-    renderFretes(filtered);
+    applyCurrentFilter();
 }
 
-// Mostrar mensagem
+// Mostrar mensagem (legado - mantido para compatibilidade)
 function showMessage(message, type = 'info') {
     const messageDiv = document.getElementById('statusMessage');
     messageDiv.textContent = message;
@@ -589,94 +760,70 @@ function showMessage(message, type = 'info') {
     }, 5000);
 }
 
-// Abrir modal de informações
+// Abrir modal de informações (formato de formulário somente leitura)
 function openInfoModal(freteId) {
     const frete = fretes.find(f => f.id === freteId);
     if (!frete) return;
 
     document.getElementById('modalNF').textContent = frete.numero_nf;
     
-    const status = getStatus(frete);
-    let statusColor = 'var(--primary)';
-    if (status === 'Entregue') statusColor = 'var(--success-color)';
-    else if (status === 'Fora do Prazo') statusColor = '#EF4444';
-    else if (status === 'Devolução') statusColor = '#F97316';
-    else if (status === 'Cancelada') statusColor = '#6B7280';
-    else if (status === 'Simples Remessa') statusColor = '#3B82F6';
-    else if (status === 'Remessa de Amostra') statusColor = '#A855F7';
-
     const infoHTML = `
-        <div class="info-section">
-            <h4>📄 Dados da Nota Fiscal</h4>
-            <div class="info-grid">
-                <div class="info-box">
-                    <div class="info-box-label">Número da NF</div>
-                    <div class="info-box-value">${frete.numero_nf}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Data de Emissão</div>
-                    <div class="info-box-value">${formatDate(frete.data_emissao)}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Número do Documento</div>
-                    <div class="info-box-value">${frete.numero_documento || 'Não informado'}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Valor da Nota</div>
-                    <div class="info-box-value" style="color: var(--primary);">${formatCurrency(frete.valor)}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Status Atual</div>
-                    <div class="info-box-value" style="color: ${statusColor};">${status}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Status Especial</div>
-                    <div class="info-box-value">${frete.status_especial || 'Nenhum'}</div>
-                </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Número da NF</label>
+                <input type="text" value="${frete.numero_nf}" readonly>
             </div>
-        </div>
-
-        <div class="info-section">
-            <h4>Responsável e Destino</h4>
-            <div class="info-grid">
-                <div class="info-box">
-                    <div class="info-box-label">Vendedor Responsável</div>
-                    <div class="info-box-value">${frete.vendedor}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Nome do Órgão</div>
-                    <div class="info-box-value">${frete.orgao}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Contato do Órgão</div>
-                    <div class="info-box-value">${frete.contato_orgao || 'Não informado'}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Cidade-UF de Destino</div>
-                    <div class="info-box-value">${frete.destino}</div>
-                </div>
+            <div class="form-group">
+                <label>Data de Emissão</label>
+                <input type="text" value="${formatDate(frete.data_emissao)}" readonly>
             </div>
-        </div>
-
-        <div class="info-section">
-            <h4>Informações de Transporte</h4>
-            <div class="info-grid">
-                <div class="info-box">
-                    <div class="info-box-label">Transportadora</div>
-                    <div class="info-box-value">${frete.transportadora}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Valor do Frete</div>
-                    <div class="info-box-value">${formatCurrency(frete.valor_frete)}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Data da Coleta</div>
-                    <div class="info-box-value">${formatDate(frete.data_coleta)}</div>
-                </div>
-                <div class="info-box">
-                    <div class="info-box-label">Data de Entrega</div>
-                    <div class="info-box-value">${formatDate(frete.data_entrega)}</div>
-                </div>
+            <div class="form-group">
+                <label>Número do Documento</label>
+                <input type="text" value="${frete.numero_documento || 'Não informado'}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Valor da Nota</label>
+                <input type="text" value="${formatCurrency(frete.valor)}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Nome do Órgão</label>
+                <input type="text" value="${frete.orgao}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Contato do Órgão</label>
+                <input type="text" value="${frete.contato_orgao || 'Não informado'}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Vendedor Responsável</label>
+                <input type="text" value="${frete.vendedor}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Transportadora</label>
+                <input type="text" value="${frete.transportadora}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Valor do Frete</label>
+                <input type="text" value="${formatCurrency(frete.valor_frete)}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Data da Coleta</label>
+                <input type="text" value="${formatDate(frete.data_coleta)}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Cidade-UF de Destino</label>
+                <input type="text" value="${frete.destino}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Data de Entrega</label>
+                <input type="text" value="${formatDate(frete.data_entrega)}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Status Especial</label>
+                <input type="text" value="${frete.status_especial || 'Nenhum'}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Status Atual</label>
+                <input type="text" value="${getStatus(frete)}" readonly>
             </div>
         </div>
     `;
@@ -715,7 +862,7 @@ function renderObservacoes(frete) {
     const observacoes = frete.observacoes || [];
 
     if (observacoes.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">📝 Nenhuma observação registrada ainda.</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Nenhuma observação registrada ainda.</p>';
         return;
     }
 
@@ -725,7 +872,7 @@ function renderObservacoes(frete) {
         <div class="observacao-item">
             <div class="observacao-header">
                 <div class="observacao-data">${formatDateTime(obs.created_at)}</div>
-                <button class="danger small" onclick="excluirObservacao('${obs.id}')" style="margin: 0; padding: 4px 8px;">Excluir</button>
+                <button class="text-only" onclick="excluirObservacao('${obs.id}')">Excluir</button>
             </div>
             <div class="observacao-texto">${obs.texto}</div>
         </div>
@@ -736,7 +883,13 @@ function renderObservacoes(frete) {
 async function adicionarObservacao() {
     const texto = document.getElementById('novaObservacao').value.trim();
     if (!texto) {
-        showMessage('Digite uma observação antes de adicionar!', 'error');
+        showSystemMessage({
+            icon: '⚠️',
+            title: 'AVISO',
+            message: 'Digite uma observação antes de adicionar!',
+            confirmText: 'OK',
+            type: 'warning'
+        });
         return;
     }
 
@@ -758,29 +911,33 @@ async function adicionarObservacao() {
 
         if (!response.ok) throw new Error('Erro ao adicionar observação');
 
-        showMessage('Observação adicionada com sucesso!', 'success');
         document.getElementById('novaObservacao').value = '';
         
-        await loadFretes();
+        await loadFretes(true);
         const frete = fretes.find(f => f.id === currentFreteIdForObs);
         renderObservacoes(frete);
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao adicionar observação', 'error');
+        showSystemMessage({
+            icon: '✕',
+            title: 'ERRO',
+            message: 'Não foi possível adicionar a observação. Tente novamente.',
+            confirmText: 'OK',
+            type: 'error'
+        });
     }
 }
 
 // Excluir observação
 async function excluirObservacao(obsId) {
-    const confirmed = await showConfirm(
-        'Tem certeza que deseja excluir esta observação?',
-        {
-            title: 'Excluir Observação',
-            confirmText: 'Excluir',
-            cancelText: 'Cancelar',
-            type: 'warning'
-        }
-    );
+    const confirmed = await showSystemConfirm({
+        icon: '⚠️',
+        title: 'CONFIRMAR EXCLUSÃO',
+        message: 'Tem certeza que deseja excluir esta observação?',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+        type: 'warning'
+    });
 
     if (!confirmed) return;
 
@@ -799,15 +956,19 @@ async function excluirObservacao(obsId) {
         }
 
         if (!response.ok) throw new Error('Erro ao excluir observação');
-
-        showMessage('Observação excluída!', 'success');
         
-        await loadFretes();
+        await loadFretes(true);
         const frete = fretes.find(f => f.id === currentFreteIdForObs);
         renderObservacoes(frete);
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao excluir observação', 'error');
+        showSystemMessage({
+            icon: '✕',
+            title: 'ERRO',
+            message: 'Não foi possível excluir a observação. Tente novamente.',
+            confirmText: 'OK',
+            type: 'error'
+        });
     }
 }
 
@@ -816,7 +977,6 @@ window.onclick = function(event) {
     const formModal = document.getElementById('formModal');
     const infoModal = document.getElementById('infoModal');
     const obsModal = document.getElementById('observacoesModal');
-    const confirmModal = document.getElementById('confirmModal');
     
     if (event.target === formModal) {
         closeFormModal();
