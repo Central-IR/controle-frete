@@ -8,23 +8,31 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Status de Conexão (canto superior direito) -->
+    <div id="connectionStatus" class="connection-status">
+        <span class="status-dot"></span>
+        <span>Conectando...</span>
+    </div>
+
     <div class="container">
+        <!-- Cabeçalho -->
         <div class="header">
             <h1>Controle de Frete</h1>
         </div>
 
         <div id="statusMessage" class="hidden"></div>
 
+        <!-- Dashboard com Cards Clicáveis -->
         <div class="dashboard">
-            <div class="dashboard-card success">
+            <div class="dashboard-card success" onclick="filterByDashboard('entregue')">
                 <h3>Entregas Realizadas</h3>
                 <div class="value" id="totalEntregues">0</div>
             </div>
-            <div class="dashboard-card">
+            <div class="dashboard-card" onclick="filterByDashboard('em-transito')">
                 <h3>Em Trânsito</h3>
                 <div class="value" id="totalEmRota">0</div>
             </div>
-            <div class="dashboard-card danger">
+            <div class="dashboard-card danger" onclick="filterByDashboard('fora-prazo')">
                 <h3>Fora do Prazo</h3>
                 <div class="value" id="totalForaPrazo">0</div>
             </div>
@@ -72,22 +80,52 @@
                     </select>
                 </div>
 
+                <!-- FILTRO POR STATUS REMOVIDO -->
+                
                 <div class="form-group">
-                    <label for="filterStatus">Filtrar por Status</label>
-                    <select id="filterStatus" onchange="filterFretes()">
+                    <label>&nbsp;</label>
+                    <button class="secondary" onclick="currentFilter = 'all'; applyCurrentFilter();" style="width: 100%; margin: 0;">
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card">
+            <h2>🔍 Filtros</h2>
+            <div class="filter-section">
+                <div class="form-group">
+                    <label for="search">Buscar</label>
+                    <input type="text" id="search" placeholder="NF, órgão, destino ou documento" oninput="filterFretes()">
+                </div>
+                <div class="form-group">
+                    <label for="filterVendedor">Vendedor</label>
+                    <select id="filterVendedor" onchange="filterFretes()">
                         <option value="">Todos</option>
-                        <option value="Em Trânsito">Em Trânsito</option>
-                        <option value="Fora do Prazo">Fora do Prazo</option>
-                        <option value="Entregue">Entrega Realizada</option>
-                        <option value="Devolução">Devolução</option>
-                        <option value="Simples Remessa">Simples Remessa</option>
-                        <option value="Remessa de Amostra">Remessa de Amostra</option>
-                        <option value="Cancelada">Cancelada</option>
+                        <option value="Miguel">Miguel</option>
+                        <option value="Roberto">Roberto</option>
+                        <option value="Isaque">Isaque</option>
+                        <option value="Gustavo">Gustavo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filterTransportadora">Transportadora</label>
+                    <select id="filterTransportadora" onchange="filterFretes()">
+                        <option value="">Todas</option>
+                        <option value="TNT Mercurio">TNT Mercurio</option>
+                        <option value="CORREIOS">CORREIOS</option>
+                        <option value="BRASPRESS">BRASPRESS</option>
+                        <option value="CONTINENTAL">CONTINENTAL</option>
+                        <option value="JAMEF">JAMEF</option>
+                        <option value="Fornecedor">Fornecedor</option>
+                        <option value="Entrega Própria">Entrega Própria</option>
                     </select>
                 </div>
             </div>
         </div>
 
+        <!-- Tabela de Fretes -->
         <div class="card">
             <h2>Monitoramento</h2>
             <div class="table-container">
@@ -106,6 +144,11 @@
                         </tr>
                     </thead>
                     <tbody id="fretesContainer">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 2rem;">
+                                Carregando dados...
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -230,6 +273,9 @@
                 <button class="close-modal" onclick="closeInfoModal()">×</button>
             </div>
             <div id="modalInfoContent"></div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="closeInfoModal()">Fechar</button>
+            </div>
         </div>
     </div>
 
