@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="png" href="logo.png">
+    <link rel="icon" type="png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
     <title>Controle de Frete</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -31,7 +31,7 @@
         </div>
 
         <button onclick="openFormModal()" style="margin-bottom: 2rem;">
-            Novo Registro de Frete
+            Registrar NF
         </button>
 
         <div class="card">
@@ -89,7 +89,7 @@
         </div>
 
         <div class="card">
-            <h2>Registros de Frete</h2>
+            <h2>Monitoramento</h2>
             <div class="table-container">
                 <table>
                     <thead>
@@ -113,8 +113,8 @@
     </div>
 
     <!-- Modal de Formulário -->
-    <div id="formModal" class="modal">
-        <div class="modal-content">
+    <div id="formModal" class="modal-overlay">
+        <div class="modal-content large">
             <div class="modal-header">
                 <h3 id="formTitle">Novo Registro de Frete</h3>
                 <button class="close-modal" onclick="closeFormModal()">×</button>
@@ -209,13 +209,13 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 1.5rem;">
+                <div class="modal-actions">
+                    <button type="button" class="secondary" onclick="closeFormModal()">
+                        Cancelar
+                    </button>
                     <button type="submit">
                         <span id="submitIcon">✓</span>
                         <span id="submitText">Registrar Frete</span>
-                    </button>
-                    <button type="button" class="secondary" onclick="closeFormModal()">
-                        Cancelar
                     </button>
                 </div>
             </form>
@@ -223,10 +223,10 @@
     </div>
 
     <!-- Modal de Informações -->
-    <div id="infoModal" class="modal">
+    <div id="infoModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 1400px;">
             <div class="modal-header">
-                <h3>Visualização Completa - NF <span id="modalNF"></span></h3>
+                <h3>Informações - NF <span id="modalNF"></span></h3>
                 <button class="close-modal" onclick="closeInfoModal()">×</button>
             </div>
             <div id="modalInfoContent"></div>
@@ -234,10 +234,10 @@
     </div>
 
     <!-- Modal de Observações -->
-    <div id="observacoesModal" class="modal">
+    <div id="observacoesModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">
-                <h3>⚠️ Observações - NF <span id="obsModalNF"></span></h3>
+                <h3>Observações - NF <span id="obsModalNF"></span></h3>
                 <button class="close-modal" onclick="closeObservacoesModal()">×</button>
             </div>
             <div style="margin-bottom: 1.5rem;">
