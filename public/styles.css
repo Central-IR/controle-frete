@@ -135,11 +135,35 @@ h2 {
     padding: 1.5rem;
     border-radius: 12px;
     color: white;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0);
+    transition: background 0.3s ease;
+    pointer-events: none;
 }
 
 .dashboard-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dashboard-card:hover::after {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-card:active {
+    transform: translateY(-2px);
 }
 
 .dashboard-card.success {
@@ -164,8 +188,11 @@ h2 {
     font-weight: 700;
 }
 
-/* Conexão */
+/* Conexão - Posicionado no canto superior direito */
 .connection-status {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -174,16 +201,21 @@ h2 {
     font-size: 0.85rem;
     font-weight: 600;
     border: 1px solid var(--status-border);
+    z-index: 9999;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px var(--shadow);
 }
 
 .connection-status.online {
     background: rgba(34, 197, 94, 0.15);
     color: var(--success-color);
+    border-color: rgba(34, 197, 94, 0.3);
 }
 
 .connection-status.offline {
     background: rgba(239, 68, 68, 0.15);
     color: #EF4444;
+    border-color: rgba(239, 68, 68, 0.3);
 }
 
 .status-dot {
@@ -191,6 +223,16 @@ h2 {
     height: 8px;
     border-radius: 50%;
     background-color: currentColor;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* Formulários e inputs */
@@ -233,6 +275,13 @@ textarea {
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary);
+}
+
+/* Campos somente leitura */
+input[readonly], select[disabled], textarea[readonly] {
+    background: var(--bg-card);
+    cursor: not-allowed;
+    opacity: 0.9;
 }
 
 /* Botões */
@@ -302,6 +351,24 @@ button.success:hover:not(:disabled) {
 button.small {
     padding: 8px 12px;
     font-size: 0.85rem;
+}
+
+/* Botão de excluir sem cor */
+button.text-only {
+    background: none;
+    color: var(--text-primary);
+    border: none;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+button.text-only:hover {
+    background: none;
+    opacity: 1;
+    text-decoration: underline;
 }
 
 /* Botão entregue */
@@ -506,7 +573,82 @@ tbody tr.cancelada {
     border: 1px solid rgba(107, 114, 128, 0.3);
 }
 
-/* Mensagens */
+/* Mensagens de sistema */
+.system-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    max-width: 500px;
+    width: 90%;
+    z-index: 10001;
+    box-shadow: 0 20px 60px var(--shadow);
+    animation: systemMessageIn 0.3s ease;
+}
+
+@keyframes systemMessageIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.system-message-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+.system-message-icon {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.system-message-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.system-message-text {
+    font-size: 0.95rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.system-message-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.system-message-actions button {
+    margin: 0;
+    min-width: 120px;
+}
+
+/* Mensagens de status */
 .status-message {
     padding: 16px;
     border-radius: 8px;
@@ -700,7 +842,7 @@ tbody tr.cancelada {
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1rem;
-    border-left: 3px solid var(--primary);
+    border-left: 3px solid var(--border-color);
 }
 
 .observacao-header {
@@ -719,6 +861,77 @@ tbody tr.cancelada {
 .observacao-texto {
     color: var(--text-primary);
     line-height: 1.5;
+}
+
+/* Botão de observação sem preenchimento */
+button.obs-btn {
+    background: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+    padding: 6px 10px;
+    transition: all 0.2s ease;
+}
+
+button.obs-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: transparent;
+}
+
+/* Tela de não autorizado simplificada */
+.unauthorized-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--bg-secondary);
+    font-family: 'Inter', sans-serif;
+}
+
+.unauthorized-content {
+    text-align: center;
+    padding: 3rem 2.5rem;
+    background: var(--bg-card);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px var(--shadow);
+    max-width: 480px;
+    width: 90%;
+    border: 1px solid var(--border-color);
+}
+
+.unauthorized-title {
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.unauthorized-message {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.unauthorized-button {
+    padding: 1rem 2rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(204, 112, 0, 0.4);
+    transition: all 0.2s;
+}
+
+.unauthorized-button:hover {
+    background: var(--primary-light);
+    transform: translateY(-2px);
 }
 
 /* Utilitários */
@@ -781,5 +994,17 @@ tbody tr.cancelada {
 
     .modal-actions button {
         width: 100%;
+    }
+
+    .connection-status {
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+    }
+
+    .system-message {
+        padding: 1.5rem 2rem;
+        width: 95%;
     }
 }
