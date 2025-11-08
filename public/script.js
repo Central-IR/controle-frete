@@ -1,24 +1,169 @@
-// Configuração da API
-const API_URL = window.location.origin;
+// ==========================================
+// ======== CONFIGURAÇÃO ====================
+// ==========================================
+const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3004/api'
+    : `${window.location.origin}/api`;
+
+const POLLING_INTERVAL = 5000;
 
 let fretes = [];
 let allFretes = [];
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 let currentFreteIdForObs = null;
+let sessionToken = null;
+let sessionCheckInterval = null;
+let pollingInterval = null;
 
-// Inicialização
+console.log('API URL configurada:', API_URL);
+
 document.addEventListener('DOMContentLoaded', () => {
+    verificarAutenticacao();
+});
+
+// ==========================================
+// ======== VERIFICAR AUTENTICAÇÃO ==========
+// ==========================================
+function verificarAutenticacao() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('sessionToken');
+
+    if (tokenFromUrl) {
+        sessionToken = tokenFromUrl;
+        sessionStorage.setItem('controleFreteSessao', sessionToken);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        sessionToken = sessionStorage.getItem('controleFreteSessao');
+    }
+
+    if (!sessionToken) {
+        mostrarTelaAcessoNegado();
+        return;
+    }
+
+    verificarSessaoValida();
+}
+
+async function verificarSessaoValida() {
+    try {
+        const response = await fetch(`${PORTAL_URL}/api/verify-session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionToken })
+        });
+
+        const data = await response.json();
+
+        if (!data.valid) {
+            sessionStorage.removeItem('controleFreteSessao');
+            mostrarTelaAcessoNegado(data.message);
+            return;
+        }
+
+        iniciarAplicacao();
+    } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+        mostrarTelaAcessoNegado('Erro ao verificar autenticação');
+    }
+}
+
+function iniciarAplicacao() {
     loadFretes();
     setTodayDate();
     updateMonthDisplay();
+    startSessionCheck();
+    startPolling();
     document.getElementById('freteForm').addEventListener('submit', handleSubmit);
-});
+}
+
+// ==========================================
+// ======== VERIFICAÇÃO PERIÓDICA DE SESSÃO =
+// ==========================================
+function startSessionCheck() {
+    if (sessionCheckInterval) {
+        clearInterval(sessionCheckInterval);
+    }
+
+    sessionCheckInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`${PORTAL_URL}/api/verify-session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionToken })
+            });
+
+            const data = await response.json();
+
+            if (!data.valid) {
+                clearInterval(sessionCheckInterval);
+                clearInterval(pollingInterval);
+                sessionStorage.removeItem('controleFreteSessao');
+                mostrarTelaAcessoNegado('Sua sessão expirou');
+            }
+        } catch (error) {
+            console.error('Erro ao verificar sessão:', error);
+        }
+    }, 30000); // Verifica a cada 30 segundos
+}
+
+// ==========================================
+// ======== POLLING AUTOMÁTICO ==============
+// ==========================================
+function startPolling() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+    }
+
+    pollingInterval = setInterval(() => {
+        loadFretes(true); // true = silent mode (sem mensagens)
+    }, POLLING_INTERVAL);
+}
+
+// ==========================================
+// ======== TELA DE ACESSO NEGADO ===========
+// ==========================================
+function mostrarTelaAcessoNegado(mensagem = 'Somente usuários autenticados podem acessar esta área') {
+    document.body.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-secondary); font-family: 'Inter', sans-serif;">
+            <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 24px; box-shadow: 0 20px 60px var(--shadow); max-width: 500px; border: 1px solid var(--border-color);">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+                <h1 style="font-size: 1.8rem; color: var(--text-primary); margin-bottom: 1rem;">NÃO AUTORIZADO</h1>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">${mensagem}</p>
+                <button onclick="voltarParaLogin()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 8px 24px rgba(204, 112, 0, 0.4); transition: all 0.2s;">
+                    Ir para o Login
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function voltarParaLogin() {
+    window.location.href = PORTAL_URL;
+}
+
+// ==========================================
+// ======== FUNÇÕES DA APLICAÇÃO ============
+// ==========================================
 
 // Carregar fretes do servidor
-async function loadFretes() {
+async function loadFretes(silent = false) {
     try {
-        const response = await fetch(`${API_URL}/api/fretes/${currentYear}/${currentMonth + 1}`);
+        const response = await fetch(`${API_URL}/fretes/${currentYear}/${currentMonth + 1}`, {
+            headers: {
+                'X-Session-Token': sessionToken,
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+
+        if (response.status === 401) {
+            sessionStorage.removeItem('controleFreteSessao');
+            mostrarTelaAcessoNegado('Sua sessão expirou');
+            return;
+        }
+
         if (!response.ok) throw new Error('Erro ao carregar fretes');
         
         fretes = await response.json();
@@ -27,7 +172,9 @@ async function loadFretes() {
         updateDashboard();
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao carregar dados', 'error');
+        if (!silent) {
+            showMessage('Erro ao conectar com o servidor: ' + error.message, 'error');
+        }
     }
 }
 
@@ -126,19 +273,31 @@ async function handleSubmit(e) {
     try {
         let response;
         if (editId) {
-            response = await fetch(`${API_URL}/api/fretes/${editId}`, {
+            response = await fetch(`${API_URL}/fretes/${editId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken
+                },
                 body: JSON.stringify(freteData)
             });
-            showMessage('Registro atualizado com sucesso!', 'success');
+            showMessage('✅ Registro atualizado com sucesso!', 'success');
         } else {
-            response = await fetch(`${API_URL}/api/fretes`, {
+            response = await fetch(`${API_URL}/fretes`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken
+                },
                 body: JSON.stringify(freteData)
             });
-            showMessage('Registro cadastrado com sucesso!', 'success');
+            showMessage('✅ Registro cadastrado com sucesso!', 'success');
+        }
+
+        if (response.status === 401) {
+            sessionStorage.removeItem('controleFreteSessao');
+            mostrarTelaAcessoNegado('Sua sessão expirou');
+            return;
         }
 
         if (!response.ok) throw new Error('Erro ao salvar');
@@ -147,49 +306,125 @@ async function handleSubmit(e) {
         closeFormModal();
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao salvar registro', 'error');
+        showMessage('❌ Erro ao salvar registro', 'error');
     }
 }
 
 // Toggle entregue
 async function toggleEntregue(id) {
     try {
-        const response = await fetch(`${API_URL}/api/fretes/${id}/toggle-entregue`, {
-            method: 'PATCH'
+        const response = await fetch(`${API_URL}/fretes/${id}/toggle-entregue`, {
+            method: 'PATCH',
+            headers: {
+                'X-Session-Token': sessionToken
+            }
         });
+
+        if (response.status === 401) {
+            sessionStorage.removeItem('controleFreteSessao');
+            mostrarTelaAcessoNegado('Sua sessão expirou');
+            return;
+        }
 
         if (!response.ok) throw new Error('Erro ao atualizar');
 
         const updatedFrete = await response.json();
         showMessage(
-            updatedFrete.entregue ? 'Entrega confirmada!' : 'Entrega desmarcada',
+            updatedFrete.entregue ? '✅ Entrega confirmada!' : '⚪ Entrega desmarcada',
             'success'
         );
 
         await loadFretes();
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao atualizar status', 'error');
+        showMessage('❌ Erro ao atualizar status', 'error');
     }
 }
 
 // Deletar frete
 async function deleteFrete(id) {
-    if (!confirm('Tem certeza que deseja excluir este registro?')) return;
+    const confirmed = await showConfirm(
+        'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.',
+        {
+            title: '⚠️ Excluir Registro',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar',
+            type: 'warning'
+        }
+    );
+
+    if (!confirmed) return;
 
     try {
-        const response = await fetch(`${API_URL}/api/fretes/${id}`, {
-            method: 'DELETE'
+        const response = await fetch(`${API_URL}/fretes/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Session-Token': sessionToken
+            }
         });
+
+        if (response.status === 401) {
+            sessionStorage.removeItem('controleFreteSessao');
+            mostrarTelaAcessoNegado('Sua sessão expirou');
+            return;
+        }
 
         if (!response.ok) throw new Error('Erro ao excluir');
 
-        showMessage('Registro excluído com sucesso!', 'success');
+        showMessage('✅ Registro excluído com sucesso!', 'success');
         await loadFretes();
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao excluir registro', 'error');
+        showMessage('❌ Erro ao excluir registro', 'error');
     }
+}
+
+// Modal de confirmação
+function showConfirm(message, options = {}) {
+    return new Promise((resolve) => {
+        const {
+            title = 'Confirmação',
+            confirmText = 'Confirmar',
+            cancelText = 'Cancelar',
+            type = 'warning'
+        } = options;
+
+        const modalHTML = `
+            <div class="modal-overlay" id="confirmModal">
+                <div class="modal-content" style="max-width: 450px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">${title}</h3>
+                    </div>
+                    <p class="modal-message">${message}</p>
+                    <div class="modal-actions">
+                        <button class="secondary" id="modalCancelBtn">${cancelText}</button>
+                        <button class="${type === 'warning' ? 'danger' : 'primary'}" id="modalConfirmBtn">${confirmText}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const modal = document.getElementById('confirmModal');
+        const confirmBtn = document.getElementById('modalConfirmBtn');
+        const cancelBtn = document.getElementById('modalCancelBtn');
+
+        const closeModal = (result) => {
+            modal.style.animation = 'fadeOut 0.2s ease forwards';
+            setTimeout(() => {
+                modal.remove();
+                resolve(result);
+            }, 200);
+        };
+
+        confirmBtn.addEventListener('click', () => closeModal(true));
+        cancelBtn.addEventListener('click', () => closeModal(false));
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal(false);
+        });
+    });
 }
 
 // Calcular status
@@ -246,7 +481,8 @@ function renderFretes(fretesArray) {
     if (sortedFretes.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align: center; padding: 3rem;">
+                <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">📦</div>
                     <p style="font-size: 1.2rem; margin-bottom: 0.5rem;">Nenhum registro encontrado</p>
                     <p>Adicione um novo envio para começar o monitoramento</p>
                 </td>
@@ -297,10 +533,10 @@ function renderFretes(fretesArray) {
                 <td><span class="badge ${badgeClass}">${status}</span></td>
                 <td>
                     <div class="actions">
-                        <button class="small" onclick="openInfoModal('${frete.id}')">Ver</button>
-                        <button class="edit small" onclick="openFormModal('${frete.id}')">Editar</button>
-                        <button class="small" onclick="openObservacoesModal('${frete.id}')" style="background: transparent; border: 2px solid #F59E0B; color: #F59E0B;" title="Observações">⚠️</button>
-                        <button class="danger small" onclick="deleteFrete('${frete.id}')">Excluir</button>
+                        <button class="small" onclick="openInfoModal('${frete.id}')">👁️ Ver</button>
+                        <button class="edit small" onclick="openFormModal('${frete.id}')">✏️ Editar</button>
+                        <button class="small" onclick="openObservacoesModal('${frete.id}')" style="background: #F59E0B; border: none;" title="Observações">⚠️</button>
+                        <button class="danger small" onclick="deleteFrete('${frete.id}')">🗑️ Excluir</button>
                     </div>
                 </td>
             </tr>
@@ -352,7 +588,7 @@ function showMessage(message, type = 'info') {
 
     setTimeout(() => {
         messageDiv.classList.add('hidden');
-    }, 4000);
+    }, 5000);
 }
 
 // Abrir modal de informações
@@ -373,7 +609,7 @@ function openInfoModal(freteId) {
 
     const infoHTML = `
         <div class="info-section">
-            <h4>Dados da Nota Fiscal</h4>
+            <h4>📄 Dados da Nota Fiscal</h4>
             <div class="info-grid">
                 <div class="info-box">
                     <div class="info-box-label">Número da NF</div>
@@ -403,7 +639,7 @@ function openInfoModal(freteId) {
         </div>
 
         <div class="info-section">
-            <h4>Responsável e Destino</h4>
+            <h4>👤 Responsável e Destino</h4>
             <div class="info-grid">
                 <div class="info-box">
                     <div class="info-box-label">Vendedor Responsável</div>
@@ -425,7 +661,7 @@ function openInfoModal(freteId) {
         </div>
 
         <div class="info-section">
-            <h4>Informações de Transporte</h4>
+            <h4>🚚 Informações de Transporte</h4>
             <div class="info-grid">
                 <div class="info-box">
                     <div class="info-box-label">Transportadora</div>
@@ -481,7 +717,7 @@ function renderObservacoes(frete) {
     const observacoes = frete.observacoes || [];
 
     if (observacoes.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Nenhuma observação registrada ainda.</p>';
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">📝 Nenhuma observação registrada ainda.</p>';
         return;
     }
 
@@ -490,8 +726,8 @@ function renderObservacoes(frete) {
     container.innerHTML = sortedObs.map(obs => `
         <div class="observacao-item">
             <div class="observacao-header">
-                <div class="observacao-data">${formatDateTime(obs.created_at)}</div>
-                <button class="danger small" onclick="excluirObservacao('${obs.id}')" style="margin: 0; padding: 4px 8px;">Excluir</button>
+                <div class="observacao-data">📅 ${formatDateTime(obs.created_at)}</div>
+                <button class="danger small" onclick="excluirObservacao('${obs.id}')" style="margin: 0; padding: 4px 8px;">🗑️ Excluir</button>
             </div>
             <div class="observacao-texto">${obs.texto}</div>
         </div>
@@ -502,20 +738,29 @@ function renderObservacoes(frete) {
 async function adicionarObservacao() {
     const texto = document.getElementById('novaObservacao').value.trim();
     if (!texto) {
-        showMessage('Digite uma observação antes de adicionar!', 'error');
+        showMessage('⚠️ Digite uma observação antes de adicionar!', 'error');
         return;
     }
 
     try {
-        const response = await fetch(`${API_URL}/api/fretes/${currentFreteIdForObs}/observacoes`, {
+        const response = await fetch(`${API_URL}/fretes/${currentFreteIdForObs}/observacoes`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Session-Token': sessionToken
+            },
             body: JSON.stringify({ texto })
         });
 
+        if (response.status === 401) {
+            sessionStorage.removeItem('controleFreteSessao');
+            mostrarTelaAcessoNegado('Sua sessão expirou');
+            return;
+        }
+
         if (!response.ok) throw new Error('Erro ao adicionar observação');
 
-        showMessage('Observação adicionada com sucesso!', 'success');
+        showMessage('✅ Observação adicionada com sucesso!', 'success');
         document.getElementById('novaObservacao').value = '';
         
         await loadFretes();
@@ -523,29 +768,48 @@ async function adicionarObservacao() {
         renderObservacoes(frete);
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao adicionar observação', 'error');
+        showMessage('❌ Erro ao adicionar observação', 'error');
     }
 }
 
 // Excluir observação
 async function excluirObservacao(obsId) {
-    if (!confirm('Tem certeza que deseja excluir esta observação?')) return;
+    const confirmed = await showConfirm(
+        'Tem certeza que deseja excluir esta observação?',
+        {
+            title: '⚠️ Excluir Observação',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar',
+            type: 'warning'
+        }
+    );
+
+    if (!confirmed) return;
 
     try {
-        const response = await fetch(`${API_URL}/api/observacoes/${obsId}`, {
-            method: 'DELETE'
+        const response = await fetch(`${API_URL}/observacoes/${obsId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Session-Token': sessionToken
+            }
         });
+
+        if (response.status === 401) {
+            sessionStorage.removeItem('controleFreteSessao');
+            mostrarTelaAcessoNegado('Sua sessão expirou');
+            return;
+        }
 
         if (!response.ok) throw new Error('Erro ao excluir observação');
 
-        showMessage('Observação excluída!', 'success');
+        showMessage('✅ Observação excluída!', 'success');
         
         await loadFretes();
         const frete = fretes.find(f => f.id === currentFreteIdForObs);
         renderObservacoes(frete);
     } catch (error) {
         console.error('Erro:', error);
-        showMessage('Erro ao excluir observação', 'error');
+        showMessage('❌ Erro ao excluir observação', 'error');
     }
 }
 
@@ -554,6 +818,7 @@ window.onclick = function(event) {
     const formModal = document.getElementById('formModal');
     const infoModal = document.getElementById('infoModal');
     const obsModal = document.getElementById('observacoesModal');
+    const confirmModal = document.getElementById('confirmModal');
     
     if (event.target === formModal) {
         closeFormModal();
