@@ -16,7 +16,6 @@ let currentFreteIdForObs = null;
 let sessionToken = null;
 let sessionCheckInterval = null;
 let pollingInterval = null;
-let currentFilter = 'all'; // Filtro ativo pelos cards do dashboard
 
 console.log('API URL configurada:', API_URL);
 
@@ -160,6 +159,24 @@ function voltarParaLogin() {
 }
 
 // ==========================================
+// ======== TOAST NOTIFICATIONS =============
+// ==========================================
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification ' + type;
+    toast.innerHTML = `
+        <div class="toast-notification-icon">${type === 'success' ? '✓' : 'ℹ️'}</div>
+        <div class="toast-notification-text">${message}</div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideInRight 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ==========================================
 // ======== FUNÇÕES DA APLICAÇÃO ============
 // ==========================================
 
@@ -187,12 +204,11 @@ async function loadFretes(silent = false) {
         fretes = await response.json();
         allFretes = [...fretes];
         
-        // Verificar atrasos apenas na primeira carga
         if (!silent) {
             verificarAtrasos();
         }
         
-        applyCurrentFilter();
+        filterFretes();
         updateDashboard();
     } catch (error) {
         console.error('Erro:', error);
@@ -215,14 +231,26 @@ function verificarAtrasos() {
     });
 
     if (atrasados.length > 0) {
-        showSystemMessage({
-            icon: '⚠️',
-            title: 'ATENÇÃO',
-            message: `Existem ${atrasados.length} mercadoria${atrasados.length > 1 ? 's' : ''} com entrega em atraso.`,
-            confirmText: 'Entendi',
-            type: 'warning'
-        });
+        mostrarAlertaAtraso(atrasados.length);
     }
+}
+
+function mostrarAlertaAtraso(quantidade) {
+    const overlay = document.createElement('div');
+    overlay.className = 'alert-overlay';
+    overlay.innerHTML = `
+        <div class="alert-content">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-title">ATENÇÃO</div>
+            <div class="alert-message">
+                <strong>Existem ${quantidade} mercadoria${quantidade > 1 ? 's' : ''} com entrega em atraso.</strong>
+            </div>
+            <button class="alert-button" onclick="this.closest('.alert-overlay').remove()">
+                Entendi
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
 }
 
 // Definir data de hoje nos campos
@@ -253,44 +281,13 @@ function changeMonth(delta) {
     loadFretes();
 }
 
-// Filtrar por card do dashboard
-function filterByDashboard(filterType) {
-    currentFilter = filterType;
-    applyCurrentFilter();
-}
-
-// Aplicar filtro atual
-function applyCurrentFilter() {
-    let filtered = [...allFretes];
-    
-    // Filtro por card do dashboard
-    if (currentFilter === 'entregue') {
-        filtered = filtered.filter(f => f.entregue);
-    } else if (currentFilter === 'em-transito') {
-        filtered = filtered.filter(f => !f.entregue && getStatus(f) === 'Em Trânsito');
-    } else if (currentFilter === 'fora-prazo') {
-        filtered = filtered.filter(f => !f.entregue && getStatus(f) === 'Fora do Prazo');
-    }
-    
-    // Filtros adicionais
-    const searchTerm = document.getElementById('search').value.toLowerCase();
-    const vendedorFilter = document.getElementById('filterVendedor').value;
-    const transportadoraFilter = document.getElementById('filterTransportadora').value;
-
-    filtered = filtered.filter(frete => {
-        const matchSearch = 
-            frete.numero_nf.toLowerCase().includes(searchTerm) ||
-            frete.orgao.toLowerCase().includes(searchTerm) ||
-            frete.destino.toLowerCase().includes(searchTerm) ||
-            (frete.numero_documento && frete.numero_documento.toLowerCase().includes(searchTerm));
-
-        const matchVendedor = !vendedorFilter || frete.vendedor === vendedorFilter;
-        const matchTransportadora = !transportadoraFilter || frete.transportadora === transportadoraFilter;
-
-        return matchSearch && matchVendedor && matchTransportadora;
-    });
-
-    renderFretes(filtered);
+// Limpar todos os filtros
+function clearFilters() {
+    document.getElementById('search').value = '';
+    document.getElementById('filterVendedor').value = '';
+    document.getElementById('filterTransportadora').value = '';
+    document.getElementById('filterStatus').value = '';
+    filterFretes();
 }
 
 // Abrir modal de formulário
@@ -336,7 +333,7 @@ function closeFormModal() {
     setTodayDate();
 }
 
-// Submeter formulário com feedback instantâneo
+// Submeter formulário
 async function handleSubmit(e) {
     e.preventDefault();
     
@@ -357,14 +354,7 @@ async function handleSubmit(e) {
         status_especial: document.getElementById('statusEspecial').value || null
     };
 
-    // Feedback instantâneo
     closeFormModal();
-    showSystemMessage({
-        icon: '⏳',
-        title: 'PROCESSANDO',
-        message: editId ? 'Atualizando registro...' : 'Criando novo registro...',
-        autoClose: false
-    });
 
     try {
         let response;
@@ -389,7 +379,6 @@ async function handleSubmit(e) {
         }
 
         if (response.status === 401) {
-            closeSystemMessage();
             sessionStorage.removeItem('controleFreteSessao');
             mostrarTelaAcessoNegado('Sua sessão expirou');
             return;
@@ -397,20 +386,10 @@ async function handleSubmit(e) {
 
         if (!response.ok) throw new Error('Erro ao salvar');
 
-        closeSystemMessage();
-        showSystemMessage({
-            icon: '✓',
-            title: 'SUCESSO',
-            message: editId ? 'Registro atualizado com sucesso!' : 'Registro criado com sucesso!',
-            confirmText: 'OK',
-            type: 'success'
-        });
-
-        // Atualizar dados em background
+        showToast(editId ? 'Registro atualizado com sucesso!' : 'Registro criado com sucesso!', 'success');
         loadFretes(true);
     } catch (error) {
         console.error('Erro:', error);
-        closeSystemMessage();
         showSystemMessage({
             icon: '✕',
             title: 'ERRO',
@@ -421,16 +400,15 @@ async function handleSubmit(e) {
     }
 }
 
-// Toggle entregue com feedback instantâneo
+// Toggle entregue
 async function toggleEntregue(id) {
     const frete = fretes.find(f => f.id === id);
     if (!frete) return;
 
     const novoStatus = !frete.entregue;
     
-    // Atualização otimista da UI
     frete.entregue = novoStatus;
-    applyCurrentFilter();
+    filterFretes();
     updateDashboard();
 
     try {
@@ -449,13 +427,11 @@ async function toggleEntregue(id) {
 
         if (!response.ok) throw new Error('Erro ao atualizar');
 
-        // Sincronizar com servidor
         await loadFretes(true);
     } catch (error) {
         console.error('Erro:', error);
-        // Reverter mudança em caso de erro
         frete.entregue = !novoStatus;
-        applyCurrentFilter();
+        filterFretes();
         updateDashboard();
         showSystemMessage({
             icon: '✕',
@@ -538,7 +514,6 @@ function showSystemMessage(options) {
         autoClose = true
     } = options;
 
-    // Remover mensagem anterior se existir
     closeSystemMessage();
 
     const messageHTML = `
@@ -563,7 +538,6 @@ function showSystemMessage(options) {
     }
 }
 
-// Fechar mensagem do sistema
 function closeSystemMessage() {
     const message = document.getElementById('systemMessage');
     const backdrop = document.getElementById('systemMessageBackdrop');
@@ -572,7 +546,6 @@ function closeSystemMessage() {
     if (backdrop) backdrop.remove();
 }
 
-// Modal de confirmação do sistema
 function showSystemConfirm(options) {
     return new Promise((resolve) => {
         const {
@@ -617,7 +590,6 @@ function showSystemConfirm(options) {
     });
 }
 
-// Calcular status
 function getStatus(frete) {
     if (frete.status_especial) {
         return frete.status_especial;
@@ -633,7 +605,6 @@ function getStatus(frete) {
     return 'Em Trânsito';
 }
 
-// Formatar moeda
 function formatCurrency(value) {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -641,13 +612,11 @@ function formatCurrency(value) {
     }).format(value);
 }
 
-// Formatar data
 function formatDate(dateStr) {
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
 }
 
-// Formatar data e hora
 function formatDateTime(dateStr) {
     return new Date(dateStr).toLocaleString('pt-BR', {
         day: '2-digit',
@@ -658,7 +627,6 @@ function formatDateTime(dateStr) {
     });
 }
 
-// Renderizar fretes
 function renderFretes(fretesArray) {
     const container = document.getElementById('fretesContainer');
     
@@ -724,6 +692,7 @@ function renderFretes(fretesArray) {
                     <div class="actions">
                         <button class="small" onclick="openInfoModal('${frete.id}')">Ver</button>
                         <button class="edit small" onclick="openFormModal('${frete.id}')">Editar</button>
+                        <button class="danger small" onclick="deleteFrete('${frete.id}')">Excluir</button>
                         <button class="obs-btn small" onclick="openObservacoesModal('${frete.id}')" title="Observações">⚠️</button>
                     </div>
                 </td>
@@ -732,7 +701,6 @@ function renderFretes(fretesArray) {
     }).join('');
 }
 
-// Atualizar dashboard
 function updateDashboard() {
     const entregues = fretes.filter(f => f.entregue).length;
     const foraPrazo = fretes.filter(f => !f.entregue && getStatus(f) === 'Fora do Prazo').length;
@@ -743,12 +711,38 @@ function updateDashboard() {
     document.getElementById('totalEmRota').textContent = emRota;
 }
 
-// Filtrar fretes (sem filtro de status)
 function filterFretes() {
-    applyCurrentFilter();
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    const vendedorFilter = document.getElementById('filterVendedor').value;
+    const transportadoraFilter = document.getElementById('filterTransportadora').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+
+    let filtered = [...allFretes];
+
+    if (searchTerm) {
+        filtered = filtered.filter(frete =>
+            frete.numero_nf.toLowerCase().includes(searchTerm) ||
+            frete.orgao.toLowerCase().includes(searchTerm) ||
+            frete.destino.toLowerCase().includes(searchTerm) ||
+            (frete.numero_documento && frete.numero_documento.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    if (vendedorFilter) {
+        filtered = filtered.filter(f => f.vendedor === vendedorFilter);
+    }
+
+    if (transportadoraFilter) {
+        filtered = filtered.filter(f => f.transportadora === transportadoraFilter);
+    }
+
+    if (statusFilter) {
+        filtered = filtered.filter(f => getStatus(f) === statusFilter);
+    }
+
+    renderFretes(filtered);
 }
 
-// Mostrar mensagem (legado - mantido para compatibilidade)
 function showMessage(message, type = 'info') {
     const messageDiv = document.getElementById('statusMessage');
     messageDiv.textContent = message;
@@ -760,7 +754,6 @@ function showMessage(message, type = 'info') {
     }, 5000);
 }
 
-// Abrir modal de informações (formato de formulário somente leitura)
 function openInfoModal(freteId) {
     const frete = fretes.find(f => f.id === freteId);
     if (!frete) return;
@@ -832,12 +825,10 @@ function openInfoModal(freteId) {
     document.getElementById('infoModal').classList.add('show');
 }
 
-// Fechar modal de informações
 function closeInfoModal() {
     document.getElementById('infoModal').classList.remove('show');
 }
 
-// Abrir modal de observações
 function openObservacoesModal(freteId) {
     currentFreteIdForObs = freteId;
     const frete = fretes.find(f => f.id === freteId);
@@ -850,13 +841,11 @@ function openObservacoesModal(freteId) {
     document.getElementById('observacoesModal').classList.add('show');
 }
 
-// Fechar modal de observações
 function closeObservacoesModal() {
     document.getElementById('observacoesModal').classList.remove('show');
     currentFreteIdForObs = null;
 }
 
-// Renderizar observações
 function renderObservacoes(frete) {
     const container = document.getElementById('listaObservacoes');
     const observacoes = frete.observacoes || [];
@@ -879,7 +868,6 @@ function renderObservacoes(frete) {
     `).join('');
 }
 
-// Adicionar observação
 async function adicionarObservacao() {
     const texto = document.getElementById('novaObservacao').value.trim();
     if (!texto) {
@@ -928,7 +916,6 @@ async function adicionarObservacao() {
     }
 }
 
-// Excluir observação
 async function excluirObservacao(obsId) {
     const confirmed = await showSystemConfirm({
         icon: '⚠️',
@@ -972,7 +959,6 @@ async function excluirObservacao(obsId) {
     }
 }
 
-// Fechar modais clicando fora
 window.onclick = function(event) {
     const formModal = document.getElementById('formModal');
     const infoModal = document.getElementById('infoModal');
