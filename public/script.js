@@ -19,6 +19,98 @@ let pollingInterval = null;
 
 console.log('API URL configurada:', API_URL);
 
+// ==========================================
+// ======== MODAIS PADRONIZADOS =============
+// ==========================================
+
+// Modal de Confirmação (Excluir, etc)
+function showConfirmModal(options) {
+    return new Promise((resolve) => {
+        const {
+            title = 'Excluir Registro',
+            message = 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.',
+            confirmText = 'Excluir',
+            cancelText = 'Cancelar'
+        } = options;
+
+        const modalHTML = `
+            <div class="modal-confirm-overlay" id="confirmModalOverlay">
+                <div class="modal-confirm-content">
+                    <h3 class="modal-confirm-title">${title}</h3>
+                    <p class="modal-confirm-message">${message}</p>
+                    <div class="modal-confirm-actions">
+                        <button class="modal-confirm-btn cancel" id="confirmModalCancel">${cancelText}</button>
+                        <button class="modal-confirm-btn confirm" id="confirmModalConfirm">${confirmText}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const overlay = document.getElementById('confirmModalOverlay');
+        const confirmBtn = document.getElementById('confirmModalConfirm');
+        const cancelBtn = document.getElementById('confirmModalCancel');
+
+        const closeModal = (result) => {
+            overlay.style.animation = 'fadeOut 0.2s ease';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(result);
+            }, 200);
+        };
+
+        confirmBtn.addEventListener('click', () => closeModal(true));
+        cancelBtn.addEventListener('click', () => closeModal(false));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal(false);
+        });
+    });
+}
+
+// Modal de Alerta (Avisos)
+function showAlertModal(options) {
+    return new Promise((resolve) => {
+        const {
+            icon = '⚠️',
+            title = 'ATENÇÃO',
+            message = 'Mensagem de alerta',
+            buttonText = 'Entendi'
+        } = options;
+
+        const modalHTML = `
+            <div class="modal-alert-overlay" id="alertModalOverlay">
+                <div class="modal-alert-content">
+                    <div class="modal-alert-icon">${icon}</div>
+                    <h3 class="modal-alert-title">${title}</h3>
+                    <p class="modal-alert-message">${message}</p>
+                    <div class="modal-alert-actions">
+                        <button class="modal-alert-btn" id="alertModalBtn">${buttonText}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const overlay = document.getElementById('alertModalOverlay');
+        const btn = document.getElementById('alertModalBtn');
+
+        const closeModal = () => {
+            overlay.style.animation = 'fadeOut 0.2s ease';
+            setTimeout(() => {
+                overlay.remove();
+                resolve();
+            }, 200);
+        };
+
+        btn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal();
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     verificarAutenticacao();
 });
@@ -236,21 +328,12 @@ function verificarAtrasos() {
 }
 
 function mostrarAlertaAtraso(quantidade) {
-    const overlay = document.createElement('div');
-    overlay.className = 'alert-overlay';
-    overlay.innerHTML = `
-        <div class="alert-content">
-            <div class="alert-icon">⚠️</div>
-            <div class="alert-title">ATENÇÃO</div>
-            <div class="alert-message">
-                <strong>Existem ${quantidade} mercadoria${quantidade > 1 ? 's' : ''} com entrega em atraso.</strong>
-            </div>
-            <button class="alert-button" onclick="this.closest('.alert-overlay').remove()">
-                Entendi
-            </button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
+    showAlertModal({
+        icon: '⚠️',
+        title: 'ATENÇÃO',
+        message: `Existem ${quantidade} mercadoria${quantidade > 1 ? 's' : ''} com entrega em atraso.`,
+        buttonText: 'Entendi'
+    });
 }
 
 // Definir data de hoje nos campos
@@ -445,13 +528,11 @@ async function toggleEntregue(id) {
 
 // Deletar frete
 async function deleteFrete(id) {
-    const confirmed = await showSystemConfirm({
-        icon: '⚠️',
-        title: 'CONFIRMAR EXCLUSÃO',
+    const confirmed = await showConfirmModal({
+        title: 'Excluir Registro',
         message: 'Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.',
         confirmText: 'Excluir',
-        cancelText: 'Cancelar',
-        type: 'warning'
+        cancelText: 'Cancelar'
     });
 
     if (!confirmed) return;
@@ -917,13 +998,11 @@ async function adicionarObservacao() {
 }
 
 async function excluirObservacao(obsId) {
-    const confirmed = await showSystemConfirm({
-        icon: '⚠️',
-        title: 'CONFIRMAR EXCLUSÃO',
+    const confirmed = await showConfirmModal({
+        title: 'Excluir Observação',
         message: 'Tem certeza que deseja excluir esta observação?',
         confirmText: 'Excluir',
-        cancelText: 'Cancelar',
-        type: 'warning'
+        cancelText: 'Cancelar'
     });
 
     if (!confirmed) return;
