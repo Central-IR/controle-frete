@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Status de Conexão (canto superior direito) -->
+    <!-- Status de Conexão FIXO no canto superior direito -->
     <div id="connectionStatus" class="connection-status">
         <span class="status-dot"></span>
         <span>Conectando...</span>
@@ -22,17 +22,17 @@
 
         <div id="statusMessage" class="hidden"></div>
 
-        <!-- Dashboard com Cards Clicáveis -->
+        <!-- Dashboard (sem funcionalidade de filtro) -->
         <div class="dashboard">
-            <div class="dashboard-card success" onclick="filterByDashboard('entregue')">
+            <div class="dashboard-card success">
                 <h3>Entregas Realizadas</h3>
                 <div class="value" id="totalEntregues">0</div>
             </div>
-            <div class="dashboard-card" onclick="filterByDashboard('em-transito')">
+            <div class="dashboard-card">
                 <h3>Em Trânsito</h3>
                 <div class="value" id="totalEmRota">0</div>
             </div>
-            <div class="dashboard-card danger" onclick="filterByDashboard('fora-prazo')">
+            <div class="dashboard-card danger">
                 <h3>Fora do Prazo</h3>
                 <div class="value" id="totalForaPrazo">0</div>
             </div>
@@ -49,6 +49,7 @@
                 <button onclick="changeMonth(1)">Próximo →</button>
             </div>
 
+            <!-- Filtros atualizados com Status -->
             <div class="filter-section">
                 <div class="form-group">
                     <label for="search">Pesquisar</label>
@@ -80,47 +81,21 @@
                     </select>
                 </div>
 
-                <!-- FILTRO POR STATUS REMOVIDO -->
+                <div class="form-group">
+                    <label for="filterStatus">Filtrar por Status</label>
+                    <select id="filterStatus" onchange="filterFretes()">
+                        <option value="">Todos</option>
+                        <option value="Entregue">Entregue</option>
+                        <option value="Em Trânsito">Em Trânsito</option>
+                        <option value="Fora do Prazo">Fora do Prazo</option>
+                    </select>
+                </div>
                 
                 <div class="form-group">
                     <label>&nbsp;</label>
-                    <button class="secondary" onclick="currentFilter = 'all'; applyCurrentFilter();" style="width: 100%; margin: 0;">
+                    <button class="secondary" onclick="clearFilters();" style="width: 100%; margin: 0;">
                         Limpar Filtros
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filtros -->
-        <div class="card">
-            <h2>🔍 Filtros</h2>
-            <div class="filter-section">
-                <div class="form-group">
-                    <label for="search">Buscar</label>
-                    <input type="text" id="search" placeholder="NF, órgão, destino ou documento" oninput="filterFretes()">
-                </div>
-                <div class="form-group">
-                    <label for="filterVendedor">Vendedor</label>
-                    <select id="filterVendedor" onchange="filterFretes()">
-                        <option value="">Todos</option>
-                        <option value="Miguel">Miguel</option>
-                        <option value="Roberto">Roberto</option>
-                        <option value="Isaque">Isaque</option>
-                        <option value="Gustavo">Gustavo</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="filterTransportadora">Transportadora</label>
-                    <select id="filterTransportadora" onchange="filterFretes()">
-                        <option value="">Todas</option>
-                        <option value="TNT Mercurio">TNT Mercurio</option>
-                        <option value="CORREIOS">CORREIOS</option>
-                        <option value="BRASPRESS">BRASPRESS</option>
-                        <option value="CONTINENTAL">CONTINENTAL</option>
-                        <option value="JAMEF">JAMEF</option>
-                        <option value="Fornecedor">Fornecedor</option>
-                        <option value="Entrega Própria">Entrega Própria</option>
-                    </select>
                 </div>
             </div>
         </div>
