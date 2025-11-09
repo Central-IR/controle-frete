@@ -136,7 +136,6 @@ h2 {
     border-radius: 12px;
     color: white;
     transition: all 0.3s ease;
-    cursor: pointer;
     position: relative;
     overflow: hidden;
 }
@@ -153,17 +152,8 @@ h2 {
     pointer-events: none;
 }
 
-.dashboard-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
 .dashboard-card:hover::after {
     background: rgba(255, 255, 255, 0.1);
-}
-
-.dashboard-card:active {
-    transform: translateY(-2px);
 }
 
 .dashboard-card.success {
@@ -188,7 +178,7 @@ h2 {
     font-weight: 700;
 }
 
-/* Conexão - Posicionado no canto superior direito */
+/* Conexão - AGORA FIXO no canto superior direito */
 .connection-status {
     position: fixed;
     top: 1rem;
@@ -448,7 +438,7 @@ button.text-only:hover {
 /* Filtros */
 .filter-section {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
 }
 
@@ -573,7 +563,119 @@ tbody tr.cancelada {
     border: 1px solid rgba(107, 114, 128, 0.3);
 }
 
-/* Mensagens de sistema */
+/* Mensagens de sistema FLUTUANTE no canto superior direito */
+.toast-notification {
+    position: fixed;
+    top: 5rem;
+    right: 1rem;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    max-width: 400px;
+    z-index: 10001;
+    box-shadow: 0 8px 24px var(--shadow);
+    animation: slideInRight 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.toast-notification.success {
+    border-color: rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.15);
+}
+
+.toast-notification.info {
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.toast-notification-icon {
+    font-size: 1.5rem;
+}
+
+.toast-notification-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Mensagem de ALERTA FLUTUANTE (sem caixinha) */
+.alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.alert-content {
+    text-align: center;
+    padding: 2.5rem 3rem;
+    background: rgba(239, 68, 68, 0.15);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(239, 68, 68, 0.3);
+    border-radius: 16px;
+    max-width: 500px;
+    animation: scaleIn 0.3s ease;
+}
+
+.alert-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+}
+
+.alert-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.alert-message {
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.alert-button {
+    background: #EF4444;
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.alert-button:hover {
+    background: #DC2626;
+    transform: translateY(-2px);
+}
+
+/* Mensagens de sistema antigas (modais centralizados) */
 .system-message {
     position: fixed;
     top: 50%;
@@ -648,7 +750,7 @@ tbody tr.cancelada {
     min-width: 120px;
 }
 
-/* Mensagens de status */
+/* Mensagens de status antigas */
 .status-message {
     padding: 16px;
     border-radius: 8px;
@@ -669,6 +771,26 @@ tbody tr.cancelada {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
     }
 }
 
@@ -707,12 +829,6 @@ tbody tr.cancelada {
     animation: fadeIn 0.2s ease forwards;
 }
 
-@keyframes fadeIn {
-    to {
-        opacity: 1;
-    }
-}
-
 @keyframes fadeOut {
     to {
         opacity: 0;
@@ -735,12 +851,6 @@ tbody tr.cancelada {
 
 .modal-content.large {
     max-width: 1200px;
-}
-
-@keyframes scaleIn {
-    to {
-        transform: scale(1);
-    }
 }
 
 .modal-header {
@@ -879,45 +989,41 @@ button.obs-btn:hover {
     background: transparent;
 }
 
-/* Tela de não autorizado simplificada */
+/* Tela de não autorizado - SEM CAIXINHA */
 .unauthorized-screen {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     font-family: 'Inter', sans-serif;
 }
 
 .unauthorized-content {
     text-align: center;
-    padding: 3rem 2.5rem;
-    background: var(--bg-card);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px var(--shadow);
-    max-width: 480px;
-    width: 90%;
-    border: 1px solid var(--border-color);
+    padding: 0;
+    background: transparent;
+    max-width: 600px;
 }
 
 .unauthorized-title {
-    font-size: 1.8rem;
+    font-size: 2.5rem;
     color: var(--text-primary);
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
 }
 
 .unauthorized-message {
     color: var(--text-secondary);
-    margin-bottom: 2rem;
-    line-height: 1.6;
-    font-size: 0.95rem;
+    margin-bottom: 2.5rem;
+    line-height: 1.8;
+    font-size: 1.1rem;
 }
 
 .unauthorized-button {
-    padding: 1rem 2rem;
+    padding: 1rem 2.5rem;
     background: var(--primary);
     color: white;
     border: none;
@@ -1006,5 +1112,15 @@ button.obs-btn:hover {
     .system-message {
         padding: 1.5rem 2rem;
         width: 95%;
+    }
+
+    .toast-notification {
+        right: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+
+    .alert-content {
+        padding: 2rem;
+        margin: 1rem;
     }
 }
