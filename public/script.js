@@ -2,7 +2,7 @@
 // CONFIGURAÇÃO
 // ============================================
 const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
-const API_URL = 'SEU_API_URL_AQUI/api'; // SUBSTITUIR
+const API_URL = 'https://controle-frete.onrender.com/api';
 
 let fretes = [];
 let isOnline = false;
