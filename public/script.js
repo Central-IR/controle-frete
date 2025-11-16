@@ -861,17 +861,40 @@ function updateVendedoresFilter() {
 }
 
 function updateStatusFilter() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
     const statusSet = new Set();
+    let temForaDoPrazo = false;
+    
     fretes.forEach(f => {
+        // Adicionar status existente
         if (f.status?.trim()) {
             statusSet.add(f.status.trim());
+        }
+        
+        // Verificar se tem algum fora do prazo
+        if (f.status !== 'ENTREGUE') {
+            const previsao = new Date(f.previsao_entrega + 'T00:00:00');
+            previsao.setHours(0, 0, 0, 0);
+            if (previsao < hoje) {
+                temForaDoPrazo = true;
+            }
         }
     });
 
     const select = document.getElementById('filterStatus');
     if (select) {
         const currentValue = select.value;
-        select.innerHTML = '<option value="">Todos</option><option value="FORA_DO_PRAZO">Fora do Prazo</option>';
+        select.innerHTML = '<option value="">Todos</option>';
+        
+        // Adicionar "Fora do Prazo" SOMENTE se existir
+        if (temForaDoPrazo) {
+            const optionForaPrazo = document.createElement('option');
+            optionForaPrazo.value = 'FORA_DO_PRAZO';
+            optionForaPrazo.textContent = 'Fora do Prazo';
+            select.appendChild(optionForaPrazo);
+        }
         
         const statusMap = {
             'EM_TRANSITO': 'Em Trânsito',
