@@ -11,7 +11,7 @@ let sessionToken = null;
 let currentTab = 0;
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-const tabs = ['tab-frete', 'tab-origem-destino', 'tab-datas', 'tab-observacoes'];
+const tabs = ['tab-nota', 'tab-orgao', 'tab-transporte'];
 
 const meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -326,16 +326,15 @@ function showFormModal(editingId = null) {
                 
                 <div class="tabs-container">
                     <div class="tabs-nav">
-                        <button class="tab-btn active">Frete</button>
-                        <button class="tab-btn">Origem/Destino</button>
-                        <button class="tab-btn">Datas</button>
-                        <button class="tab-btn">Observações</button>
+                        <button class="tab-btn active">Dados da Nota</button>
+                        <button class="tab-btn">Órgão</button>
+                        <button class="tab-btn">Transporte</button>
                     </div>
 
                     <form id="freteForm" onsubmit="handleSubmit(event)">
                         <input type="hidden" id="editId" value="${editingId || ''}">
                         
-                        <div class="tab-content active" id="tab-frete">
+                        <div class="tab-content active" id="tab-nota">
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="numero_nf">Número da NF *</label>
@@ -346,9 +345,41 @@ function showFormModal(editingId = null) {
                                     <input type="date" id="data_emissao" value="${frete?.data_emissao || ''}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="valor_nf">Valor da NF (R$) *</label>
+                                    <label for="documento">Documento *</label>
+                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="CPF/CNPJ" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="valor_nf">Valor da Nota (R$) *</label>
                                     <input type="number" id="valor_nf" step="0.01" min="0" value="${frete?.valor_nf || ''}" required>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="tab-orgao">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="nome_orgao">Nome do Órgão *</label>
+                                    <input type="text" id="nome_orgao" value="${frete?.nome_orgao || ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="contato_orgao">Contato do Órgão</label>
+                                    <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}" placeholder="Telefone/E-mail">
+                                </div>
+                                <div class="form-group">
+                                    <label for="vendedor">Vendedor Responsável *</label>
+                                    <select id="vendedor" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="ROBERTO" ${frete?.vendedor === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
+                                        <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
+                                        <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
+                                        <option value="GUSTAVO" ${frete?.vendedor === 'GUSTAVO' ? 'selected' : ''}>GUSTAVO</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="tab-transporte">
+                            <div class="form-grid">
                                 <div class="form-group">
                                     <label for="transportadora">Transportadora *</label>
                                     <select id="transportadora" required>
@@ -364,50 +395,20 @@ function showFormModal(editingId = null) {
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="codigo_rastreio">Código de Rastreio</label>
-                                    <input type="text" id="codigo_rastreio" value="${frete?.codigo_rastreio || ''}">
-                                </div>
-                                <div class="form-group">
                                     <label for="valor_frete">Valor do Frete (R$) *</label>
                                     <input type="number" id="valor_frete" step="0.01" min="0" value="${frete?.valor_frete || ''}" required>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="tab-content" id="tab-origem-destino">
-                            <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="cidade_origem">Cidade de Origem *</label>
-                                    <input type="text" id="cidade_origem" value="${frete?.cidade_origem || ''}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="uf_origem">UF de Origem *</label>
-                                    <input type="text" id="uf_origem" value="${frete?.uf_origem || ''}" maxlength="2" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="cidade_destino">Cidade de Destino *</label>
-                                    <input type="text" id="cidade_destino" value="${frete?.cidade_destino || ''}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="uf_destino">UF de Destino *</label>
-                                    <input type="text" id="uf_destino" value="${frete?.uf_destino || ''}" maxlength="2" required>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="tab-content" id="tab-datas">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="data_coleta">Data de Coleta</label>
+                                    <label for="data_coleta">Data da Coleta</label>
                                     <input type="date" id="data_coleta" value="${frete?.data_coleta || ''}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="previsao_entrega">Previsão de Entrega *</label>
-                                    <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}" required>
+                                    <label for="cidade_destino">Cidade-UF (Destino) *</label>
+                                    <input type="text" id="cidade_destino" value="${frete?.cidade_destino || ''}" placeholder="Ex: São Paulo-SP" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="data_entrega_real">Data de Entrega Real</label>
-                                    <input type="date" id="data_entrega_real" value="${frete?.data_entrega_real || ''}">
+                                    <label for="previsao_entrega">Data de Entrega *</label>
+                                    <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="status">Status *</label>
@@ -428,34 +429,6 @@ function showFormModal(editingId = null) {
                             </div>
                         </div>
 
-                        <div class="tab-content" id="tab-observacoes">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="responsavel">Responsável *</label>
-                                    <select id="responsavel" required>
-                                        <option value="">Selecione...</option>
-                                        <option value="ROBERTO" ${frete?.responsavel === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
-                                        <option value="ISAQUE" ${frete?.responsavel === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
-                                        <option value="MIGUEL" ${frete?.responsavel === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
-                                        <option value="GUSTAVO" ${frete?.responsavel === 'GUSTAVO' ? 'selected' : ''}>GUSTAVO</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="vendedor">Vendedor</label>
-                                    <select id="vendedor">
-                                        <option value="">Selecione...</option>
-                                        <option value="ROBERTO" ${frete?.vendedor === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
-                                        <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
-                                        <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
-                                    </select>
-                                </div>
-                                <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label for="observacoes">Observações</label>
-                                    <textarea id="observacoes" rows="4">${frete?.observacoes || ''}</textarea>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="modal-actions">
                             <button type="button" class="secondary" id="btnVoltar" onclick="previousTab()" style="display: none;">Voltar</button>
                             <button type="button" class="secondary" id="btnProximo" onclick="nextTab()">Próximo</button>
@@ -472,8 +445,7 @@ function showFormModal(editingId = null) {
     updateNavigationButtons();
     
     // MAIÚSCULAS automáticas
-    const camposMaiusculas = ['numero_nf', 'codigo_rastreio', 'cidade_origem', 'uf_origem', 
-                               'cidade_destino', 'uf_destino', 'observacoes'];
+    const camposMaiusculas = ['numero_nf', 'documento', 'nome_orgao', 'contato_orgao', 'cidade_destino'];
 
     camposMaiusculas.forEach(campoId => {
         const campo = document.getElementById(campoId);
@@ -578,21 +550,17 @@ async function handleSubmit(event) {
     const formData = {
         numero_nf: document.getElementById('numero_nf').value.trim(),
         data_emissao: document.getElementById('data_emissao').value,
+        documento: document.getElementById('documento').value.trim(),
         valor_nf: parseFloat(document.getElementById('valor_nf').value),
-        transportadora: document.getElementById('transportadora').value.trim(),
-        codigo_rastreio: document.getElementById('codigo_rastreio').value.trim(),
-        valor_frete: parseFloat(document.getElementById('valor_frete').value),
-        cidade_origem: document.getElementById('cidade_origem').value.trim(),
-        uf_origem: document.getElementById('uf_origem').value.trim(),
-        cidade_destino: document.getElementById('cidade_destino').value.trim(),
-        uf_destino: document.getElementById('uf_destino').value.trim(),
-        data_coleta: document.getElementById('data_coleta').value,
-        previsao_entrega: document.getElementById('previsao_entrega').value,
-        data_entrega_real: document.getElementById('data_entrega_real').value,
-        status: document.getElementById('status').value,
-        responsavel: document.getElementById('responsavel').value.trim(),
+        nome_orgao: document.getElementById('nome_orgao').value.trim(),
+        contato_orgao: document.getElementById('contato_orgao').value.trim(),
         vendedor: document.getElementById('vendedor').value.trim(),
-        observacoes: document.getElementById('observacoes').value.trim()
+        transportadora: document.getElementById('transportadora').value.trim(),
+        valor_frete: parseFloat(document.getElementById('valor_frete').value),
+        data_coleta: document.getElementById('data_coleta').value,
+        cidade_destino: document.getElementById('cidade_destino').value.trim(),
+        previsao_entrega: document.getElementById('previsao_entrega').value,
+        status: document.getElementById('status').value
     };
 
     const editId = document.getElementById('editId').value;
@@ -743,48 +711,39 @@ window.viewFrete = function(id) {
                 
                 <div class="tabs-container">
                     <div class="tabs-nav">
-                        <button class="tab-btn active" onclick="switchViewTab(0)">Frete</button>
-                        <button class="tab-btn" onclick="switchViewTab(1)">Origem/Destino</button>
-                        <button class="tab-btn" onclick="switchViewTab(2)">Datas</button>
-                        <button class="tab-btn" onclick="switchViewTab(3)">Observações</button>
+                        <button class="tab-btn active" onclick="switchViewTab(0)">Dados da Nota</button>
+                        <button class="tab-btn" onclick="switchViewTab(1)">Órgão</button>
+                        <button class="tab-btn" onclick="switchViewTab(2)">Transporte</button>
                     </div>
 
-                    <div class="tab-content active" id="view-tab-frete">
+                    <div class="tab-content active" id="view-tab-nota">
                         <div class="info-section">
-                            <h4>Dados do Frete</h4>
+                            <h4>Dados da Nota Fiscal</h4>
                             <p><strong>Número NF:</strong> ${frete.numero_nf}</p>
                             <p><strong>Data Emissão:</strong> ${formatDate(frete.data_emissao)}</p>
+                            <p><strong>Documento:</strong> ${frete.documento}</p>
                             <p><strong>Valor NF:</strong> R$ ${parseFloat(frete.valor_nf).toFixed(2)}</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="view-tab-orgao">
+                        <div class="info-section">
+                            <h4>Dados do Órgão</h4>
+                            <p><strong>Nome do Órgão:</strong> ${frete.nome_orgao}</p>
+                            ${frete.contato_orgao ? `<p><strong>Contato:</strong> ${frete.contato_orgao}</p>` : ''}
+                            <p><strong>Vendedor Responsável:</strong> ${frete.vendedor}</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="view-tab-transporte">
+                        <div class="info-section">
+                            <h4>Dados do Transporte</h4>
                             <p><strong>Transportadora:</strong> ${frete.transportadora}</p>
-                            ${frete.codigo_rastreio ? `<p><strong>Código Rastreio:</strong> ${frete.codigo_rastreio}</p>` : ''}
-                            <p><strong>Valor Frete:</strong> R$ ${parseFloat(frete.valor_frete).toFixed(2)}</p>
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="view-tab-origem-destino">
-                        <div class="info-section">
-                            <h4>Origem e Destino</h4>
-                            <p><strong>Origem:</strong> ${frete.cidade_origem}-${frete.uf_origem}</p>
-                            <p><strong>Destino:</strong> ${frete.cidade_destino}-${frete.uf_destino}</p>
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="view-tab-datas">
-                        <div class="info-section">
-                            <h4>Datas</h4>
+                            <p><strong>Valor do Frete:</strong> R$ ${parseFloat(frete.valor_frete).toFixed(2)}</p>
                             ${frete.data_coleta ? `<p><strong>Data Coleta:</strong> ${formatDate(frete.data_coleta)}</p>` : ''}
+                            <p><strong>Destino:</strong> ${frete.cidade_destino}</p>
                             <p><strong>Previsão Entrega:</strong> ${formatDate(frete.previsao_entrega)}</p>
-                            ${frete.data_entrega_real ? `<p><strong>Entrega Real:</strong> ${formatDate(frete.data_entrega_real)}</p>` : ''}
                             <p><strong>Status:</strong> ${getStatusBadge(frete.status)}</p>
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="view-tab-observacoes">
-                        <div class="info-section">
-                            <h4>Informações Adicionais</h4>
-                            <p><strong>Responsável:</strong> ${frete.responsavel}</p>
-                            ${frete.vendedor ? `<p><strong>Vendedor:</strong> ${frete.vendedor}</p>` : ''}
-                            ${frete.observacoes ? `<p><strong>Observações:</strong> ${frete.observacoes}</p>` : ''}
                         </div>
                     </div>
                 </div>
@@ -931,9 +890,9 @@ function renderFretes(fretesToRender) {
                     <tr>
                         <th>NF</th>
                         <th>Data Emissão</th>
+                        <th>Órgão</th>
+                        <th>Vendedor</th>
                         <th>Transportadora</th>
-                        <th>Rastreio</th>
-                        <th>Origem</th>
                         <th>Destino</th>
                         <th>Valor Frete</th>
                         <th>Status</th>
@@ -945,10 +904,10 @@ function renderFretes(fretesToRender) {
                         <tr>
                             <td><strong>${f.numero_nf}</strong></td>
                             <td>${formatDate(f.data_emissao)}</td>
+                            <td>${f.nome_orgao}</td>
+                            <td>${f.vendedor}</td>
                             <td>${f.transportadora}</td>
-                            <td>${f.codigo_rastreio || '-'}</td>
-                            <td>${f.cidade_origem}-${f.uf_origem}</td>
-                            <td>${f.cidade_destino}-${f.uf_destino}</td>
+                            <td>${f.cidade_destino}</td>
                             <td><strong>R$ ${parseFloat(f.valor_frete).toFixed(2)}</strong></td>
                             <td>${getStatusBadge(f.status)}</td>
                             <td class="actions-cell" style="text-align: center;">
