@@ -192,7 +192,7 @@ function updateDashboard() {
     const hoje = new Date();
     
     // Status monitorados
-    const statusMonitorados = ['AGUARDANDO_COLETA', 'EM_TRANSITO', 'EM_ROTA_ENTREGA', 'ENTREGUE'];
+    const statusMonitorados = ['EM_TRANSITO', 'EM_ROTA_ENTREGA', 'ENTREGUE'];
     
     // Filtrar apenas fretes monitorados do mês selecionado
     const fretesMonitoradosDoMes = fretes.filter(f => {
@@ -213,7 +213,7 @@ function updateDashboard() {
     
     // Em Trânsito (monitorados ativos)
     const transito = fretesMonitoradosDoMes.filter(f => 
-        f.status === 'EM_TRANSITO' || f.status === 'EM_ROTA_ENTREGA' || f.status === 'AGUARDANDO_COLETA'
+        f.status === 'EM_TRANSITO' || f.status === 'EM_ROTA_ENTREGA'
     ).length;
     
     // Todos os fretes do mês (incluindo não monitorados)
@@ -228,11 +228,25 @@ function updateDashboard() {
     // Frete Total (todos do mês)
     const freteTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
     
+    // Atualizar valores
     document.getElementById('statEntregues').textContent = entregues;
     document.getElementById('statForaPrazo').textContent = foraPrazo;
     document.getElementById('statTransito').textContent = transito;
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('statFrete').textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    // ALERTA VISUAL - Fora do Prazo
+    const cardForaPrazo = document.getElementById('cardForaPrazo');
+    const pulseBadge = document.getElementById('pulseBadge');
+    
+    if (foraPrazo > 0) {
+        cardForaPrazo.classList.add('has-alert');
+        pulseBadge.style.display = 'flex';
+        pulseBadge.textContent = foraPrazo;
+    } else {
+        cardForaPrazo.classList.remove('has-alert');
+        pulseBadge.style.display = 'none';
+    }
 }
 
 // ============================================
@@ -399,7 +413,6 @@ function showFormModal(editingId = null) {
                                     <label for="status">Status *</label>
                                     <select id="status" required>
                                         <optgroup label="Monitorados">
-                                            <option value="AGUARDANDO_COLETA" ${frete?.status === 'AGUARDANDO_COLETA' ? 'selected' : ''}>Aguardando Coleta</option>
                                             <option value="EM_TRANSITO" ${frete?.status === 'EM_TRANSITO' ? 'selected' : ''}>Em Trânsito</option>
                                             <option value="EM_ROTA_ENTREGA" ${frete?.status === 'EM_ROTA_ENTREGA' ? 'selected' : ''}>Em Rota de Entrega</option>
                                             <option value="ENTREGUE" ${frete?.status === 'ENTREGUE' ? 'selected' : ''}>Entregue</option>
@@ -409,7 +422,6 @@ function showFormModal(editingId = null) {
                                             <option value="SIMPLES_REMESSA" ${frete?.status === 'SIMPLES_REMESSA' ? 'selected' : ''}>Simples Remessa</option>
                                             <option value="REMESSA_AMOSTRA" ${frete?.status === 'REMESSA_AMOSTRA' ? 'selected' : ''}>Remessa de Amostra</option>
                                             <option value="CANCELADO" ${frete?.status === 'CANCELADO' ? 'selected' : ''}>Cancelada</option>
-                                            <option value="EXTRAVIADO" ${frete?.status === 'EXTRAVIADO' ? 'selected' : ''}>Extraviado</option>
                                         </optgroup>
                                     </select>
                                 </div>
@@ -965,15 +977,13 @@ function formatDate(dateString) {
 
 function getStatusBadge(status) {
     const statusMap = {
-        'AGUARDANDO_COLETA': { class: 'aguardando', text: 'Aguardando Coleta' },
         'EM_TRANSITO': { class: 'transito', text: 'Em Trânsito' },
         'EM_ROTA_ENTREGA': { class: 'rota', text: 'Em Rota de Entrega' },
         'ENTREGUE': { class: 'entregue', text: 'Entregue' },
         'DEVOLUCAO': { class: 'devolvido', text: 'Devolução' },
         'SIMPLES_REMESSA': { class: 'cancelado', text: 'Simples Remessa' },
         'REMESSA_AMOSTRA': { class: 'cancelado', text: 'Remessa de Amostra' },
-        'CANCELADO': { class: 'cancelado', text: 'Cancelada' },
-        'EXTRAVIADO': { class: 'extraviado', text: 'Extraviado' }
+        'CANCELADO': { class: 'cancelado', text: 'Cancelada' }
     };
     
     const s = statusMap[status] || { class: 'transito', text: status };
