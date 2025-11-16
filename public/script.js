@@ -190,9 +190,10 @@ function startPolling() {
 // ============================================
 function updateDashboard() {
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
     
     // Status monitorados
-    const statusMonitorados = ['EM_TRANSITO', 'EM_ROTA_ENTREGA', 'ENTREGUE'];
+    const statusMonitorados = ['EM_TRANSITO', 'ENTREGUE'];
     
     // Filtrar apenas fretes monitorados do mês selecionado
     const fretesMonitoradosDoMes = fretes.filter(f => {
@@ -208,13 +209,12 @@ function updateDashboard() {
     const foraPrazo = fretesMonitoradosDoMes.filter(f => {
         if (f.status === 'ENTREGUE') return false;
         const previsao = new Date(f.previsao_entrega + 'T00:00:00');
+        previsao.setHours(0, 0, 0, 0);
         return previsao < hoje;
     }).length;
     
     // Em Trânsito (monitorados ativos)
-    const transito = fretesMonitoradosDoMes.filter(f => 
-        f.status === 'EM_TRANSITO' || f.status === 'EM_ROTA_ENTREGA'
-    ).length;
+    const transito = fretesMonitoradosDoMes.filter(f => f.status === 'EM_TRANSITO').length;
     
     // Todos os fretes do mês (incluindo não monitorados)
     const todosFretesDoMes = fretes.filter(f => {
@@ -235,7 +235,7 @@ function updateDashboard() {
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('statFrete').textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
-    // ALERTA VISUAL - Fora do Prazo
+    // ALERTA VISUAL SUTIL - Fora do Prazo
     const cardForaPrazo = document.getElementById('cardForaPrazo');
     const pulseBadge = document.getElementById('pulseBadge');
     
@@ -410,22 +410,6 @@ function showFormModal(editingId = null) {
                                     <label for="previsao_entrega">Data de Entrega *</label>
                                     <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}" required>
                                 </div>
-                                <div class="form-group">
-                                    <label for="status">Status *</label>
-                                    <select id="status" required>
-                                        <optgroup label="Monitorados">
-                                            <option value="EM_TRANSITO" ${frete?.status === 'EM_TRANSITO' ? 'selected' : ''}>Em Trânsito</option>
-                                            <option value="EM_ROTA_ENTREGA" ${frete?.status === 'EM_ROTA_ENTREGA' ? 'selected' : ''}>Em Rota de Entrega</option>
-                                            <option value="ENTREGUE" ${frete?.status === 'ENTREGUE' ? 'selected' : ''}>Entregue</option>
-                                        </optgroup>
-                                        <optgroup label="Não Monitorados">
-                                            <option value="DEVOLUCAO" ${frete?.status === 'DEVOLUCAO' ? 'selected' : ''}>Devolução</option>
-                                            <option value="SIMPLES_REMESSA" ${frete?.status === 'SIMPLES_REMESSA' ? 'selected' : ''}>Simples Remessa</option>
-                                            <option value="REMESSA_AMOSTRA" ${frete?.status === 'REMESSA_AMOSTRA' ? 'selected' : ''}>Remessa de Amostra</option>
-                                            <option value="CANCELADO" ${frete?.status === 'CANCELADO' ? 'selected' : ''}>Cancelada</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
                             </div>
                         </div>
 
@@ -559,8 +543,8 @@ async function handleSubmit(event) {
         valor_frete: parseFloat(document.getElementById('valor_frete').value),
         data_coleta: document.getElementById('data_coleta').value,
         cidade_destino: document.getElementById('cidade_destino').value.trim(),
-        previsao_entrega: document.getElementById('previsao_entrega').value,
-        status: document.getElementById('status').value
+        previsao_entrega: document.getElementById('previsao_entrega').value
+        // Status será calculado automaticamente pelo servidor
     };
 
     const editId = document.getElementById('editId').value;
@@ -571,8 +555,6 @@ async function handleSubmit(event) {
             formData.timestamp = freteExistente.timestamp;
         }
     }
-
-    closeFormModal();
 
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
@@ -624,8 +606,57 @@ async function handleSubmit(event) {
     } catch (error) {
         console.error('Erro:', error);
         showMessage(`Erro: ${error.message}`, 'error');
+    } finally {
+        closeFormModal();
     }
 }
+
+// ============================================
+// TOGGLE ENTREGUE (CHECKBOX)
+// ============================================
+window.toggleEntregue = async function(id) {
+    const idStr = String(id);
+    const frete = fretes.find(f => String(f.id) === idStr);
+    
+    if (!frete) return;
+
+    const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
+
+    // Atualizar localmente
+    frete.status = novoStatus;
+    updateDashboard();
+    filterFretes();
+
+    // Atualizar no servidor
+    if (isOnline) {
+        try {
+            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ status: novoStatus }),
+                mode: 'cors'
+            });
+
+            if (!response.ok) throw new Error('Erro ao atualizar');
+
+            const savedData = await response.json();
+            const index = fretes.findIndex(f => String(f.id) === idStr);
+            if (index !== -1) fretes[index] = savedData;
+
+        } catch (error) {
+            console.error('Erro ao atualizar status:', error);
+            // Reverter mudança
+            frete.status = novoStatus === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
+            updateDashboard();
+            filterFretes();
+            showMessage('Erro ao atualizar status', 'error');
+        }
+    }
+};
 
 // ============================================
 // EDIÇÃO
@@ -781,7 +812,8 @@ window.switchViewTab = function(index) {
 // ============================================
 function updateAllFilters() {
     updateTransportadorasFilter();
-    updateResponsaveisFilter();
+    updateVendedoresFilter();
+    updateStatusFilter();
 }
 
 function updateTransportadorasFilter() {
@@ -806,22 +838,54 @@ function updateTransportadorasFilter() {
     }
 }
 
-function updateResponsaveisFilter() {
-    const responsaveis = new Set();
+function updateVendedoresFilter() {
+    const vendedores = new Set();
     fretes.forEach(f => {
-        if (f.responsavel?.trim()) {
-            responsaveis.add(f.responsavel.trim());
+        if (f.vendedor?.trim()) {
+            vendedores.add(f.vendedor.trim());
         }
     });
 
-    const select = document.getElementById('filterResponsavel');
+    const select = document.getElementById('filterVendedor');
     if (select) {
         const currentValue = select.value;
         select.innerHTML = '<option value="">Todos</option>';
-        Array.from(responsaveis).sort().forEach(r => {
+        Array.from(vendedores).sort().forEach(v => {
             const option = document.createElement('option');
-            option.value = r;
-            option.textContent = r;
+            option.value = v;
+            option.textContent = v;
+            select.appendChild(option);
+        });
+        select.value = currentValue;
+    }
+}
+
+function updateStatusFilter() {
+    const statusSet = new Set();
+    fretes.forEach(f => {
+        if (f.status?.trim()) {
+            statusSet.add(f.status.trim());
+        }
+    });
+
+    const select = document.getElementById('filterStatus');
+    if (select) {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Todos</option><option value="FORA_DO_PRAZO">Fora do Prazo</option>';
+        
+        const statusMap = {
+            'EM_TRANSITO': 'Em Trânsito',
+            'ENTREGUE': 'Entregue',
+            'DEVOLUCAO': 'Devolução',
+            'SIMPLES_REMESSA': 'Simples Remessa',
+            'REMESSA_AMOSTRA': 'Remessa de Amostra',
+            'CANCELADO': 'Cancelada'
+        };
+        
+        Array.from(statusSet).sort().forEach(s => {
+            const option = document.createElement('option');
+            option.value = s;
+            option.textContent = statusMap[s] || s;
             select.appendChild(option);
         });
         select.value = currentValue;
@@ -835,7 +899,7 @@ function filterFretes() {
     const searchTerm = document.getElementById('search')?.value.toLowerCase() || '';
     const filterTransportadora = document.getElementById('filterTransportadora')?.value || '';
     const filterStatus = document.getElementById('filterStatus')?.value || '';
-    const filterResponsavel = document.getElementById('filterResponsavel')?.value || '';
+    const filterVendedor = document.getElementById('filterVendedor')?.value || '';
     
     let filtered = [...fretes];
 
@@ -850,23 +914,34 @@ function filterFretes() {
     }
 
     if (filterStatus) {
-        filtered = filtered.filter(f => f.status === filterStatus);
+        if (filterStatus === 'FORA_DO_PRAZO') {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            filtered = filtered.filter(f => {
+                if (f.status === 'ENTREGUE') return false;
+                const previsao = new Date(f.previsao_entrega + 'T00:00:00');
+                previsao.setHours(0, 0, 0, 0);
+                return previsao < hoje;
+            });
+        } else {
+            filtered = filtered.filter(f => f.status === filterStatus);
+        }
     }
 
-    if (filterResponsavel) {
-        filtered = filtered.filter(f => f.responsavel === filterResponsavel);
+    if (filterVendedor) {
+        filtered = filtered.filter(f => f.vendedor === filterVendedor);
     }
 
     if (searchTerm) {
         filtered = filtered.filter(f => 
             f.numero_nf?.toLowerCase().includes(searchTerm) ||
-            f.codigo_rastreio?.toLowerCase().includes(searchTerm) ||
             f.transportadora?.toLowerCase().includes(searchTerm) ||
+            f.nome_orgao?.toLowerCase().includes(searchTerm) ||
             f.cidade_destino?.toLowerCase().includes(searchTerm)
         );
     }
 
-    filtered.sort((a, b) => new Date(b.data_emissao) - new Date(a.data_emissao));
+    filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
     renderFretes(filtered);
 }
 
@@ -888,6 +963,7 @@ function renderFretes(fretesToRender) {
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 50px; text-align: center;">✓</th>
                         <th>NF</th>
                         <th>Data Emissão</th>
                         <th>Órgão</th>
@@ -902,6 +978,14 @@ function renderFretes(fretesToRender) {
                 <tbody>
                     ${fretesToRender.map(f => `
                         <tr>
+                            <td style="text-align: center;">
+                                <input 
+                                    type="checkbox" 
+                                    ${f.status === 'ENTREGUE' ? 'checked' : ''}
+                                    onchange="toggleEntregue('${f.id}')"
+                                    class="entregue-checkbox"
+                                >
+                            </td>
                             <td><strong>${f.numero_nf}</strong></td>
                             <td>${formatDate(f.data_emissao)}</td>
                             <td>${f.nome_orgao}</td>
@@ -937,7 +1021,6 @@ function formatDate(dateString) {
 function getStatusBadge(status) {
     const statusMap = {
         'EM_TRANSITO': { class: 'transito', text: 'Em Trânsito' },
-        'EM_ROTA_ENTREGA': { class: 'rota', text: 'Em Rota de Entrega' },
         'ENTREGUE': { class: 'entregue', text: 'Entregue' },
         'DEVOLUCAO': { class: 'devolvido', text: 'Devolução' },
         'SIMPLES_REMESSA': { class: 'cancelado', text: 'Simples Remessa' },
