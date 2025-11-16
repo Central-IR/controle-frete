@@ -79,22 +79,12 @@
                         <label for="filterStatus">Status</label>
                         <select id="filterStatus" onchange="filterFretes()">
                             <option value="">Todos</option>
-                            <optgroup label="Monitorados">
-                                <option value="EM_TRANSITO">Em Trânsito</option>
-                                <option value="EM_ROTA_ENTREGA">Em Rota de Entrega</option>
-                                <option value="ENTREGUE">Entregue</option>
-                            </optgroup>
-                            <optgroup label="Não Monitorados">
-                                <option value="DEVOLUCAO">Devolução</option>
-                                <option value="SIMPLES_REMESSA">Simples Remessa</option>
-                                <option value="REMESSA_AMOSTRA">Remessa de Amostra</option>
-                                <option value="CANCELADO">Cancelada</option>
-                            </optgroup>
+                            <option value="FORA_DO_PRAZO">Fora do Prazo</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="filterResponsavel">Responsável</label>
-                        <select id="filterResponsavel" onchange="filterFretes()">
+                        <label for="filterVendedor">Vendedor</label>
+                        <select id="filterVendedor" onchange="filterFretes()">
                             <option value="">Todos</option>
                         </select>
                     </div>
