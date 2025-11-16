@@ -181,8 +181,7 @@ app.post('/api/fretes', async (req, res) => {
             valor_frete,
             data_coleta,
             cidade_destino,
-            previsao_entrega,
-            status
+            previsao_entrega
         } = req.body;
 
         // Validações
@@ -192,6 +191,14 @@ app.post('/api/fretes', async (req, res) => {
                 error: 'Campos obrigatórios faltando'
             });
         }
+
+        // Calcular status automaticamente
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const dataPrevisao = new Date(previsao_entrega);
+        dataPrevisao.setHours(0, 0, 0, 0);
+        
+        const status = 'EM_TRANSITO'; // Sempre começa em trânsito
 
         const { data, error } = await supabase
             .from('controle_frete')
@@ -208,7 +215,7 @@ app.post('/api/fretes', async (req, res) => {
                 data_coleta: data_coleta || null,
                 cidade_destino,
                 previsao_entrega,
-                status: status || 'EM_TRANSITO'
+                status
             }])
             .select()
             .single();
@@ -244,10 +251,10 @@ app.put('/api/fretes/:id', async (req, res) => {
             valor_frete,
             data_coleta,
             cidade_destino,
-            previsao_entrega,
-            status
+            previsao_entrega
         } = req.body;
 
+        // Status mantém o atual (não recalcula no update)
         const { data, error } = await supabase
             .from('controle_frete')
             .update({
@@ -262,8 +269,7 @@ app.put('/api/fretes/:id', async (req, res) => {
                 valor_frete,
                 data_coleta,
                 cidade_destino,
-                previsao_entrega,
-                status
+                previsao_entrega
             })
             .eq('id', id)
             .select()
@@ -281,6 +287,38 @@ app.put('/api/fretes/:id', async (req, res) => {
         console.error('❌ Erro ao atualizar frete:', error);
         res.status(500).json({ 
             error: 'Erro ao atualizar frete',
+            details: error.message 
+        });
+    }
+});
+
+// PATCH - Toggle status (checkbox)
+app.patch('/api/fretes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        console.log(`🔄 Toggle status do frete ${id} para: ${status}`);
+
+        const { data, error } = await supabase
+            .from('controle_frete')
+            .update({ status })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: 'Frete não encontrado' });
+        }
+
+        console.log('✅ Status atualizado');
+        res.json(data);
+    } catch (error) {
+        console.error('❌ Erro ao atualizar status:', error);
+        res.status(500).json({ 
+            error: 'Erro ao atualizar status',
             details: error.message 
         });
     }
