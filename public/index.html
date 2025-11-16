@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Frete</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Splash Screen -->
@@ -26,23 +26,27 @@
                 <button onclick="toggleForm()" class="register">Registrar Frete</button>
             </div>
 
-            <!-- Dashboard Sutil -->
+            <!-- Dashboard Atualizado -->
             <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Total de Fretes</div>
-                    <div class="stat-value" id="statTotal">0</div>
-                </div>
                 <div class="stat-card">
                     <div class="stat-label">Em Trânsito</div>
                     <div class="stat-value" id="statTransito">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Entregues</div>
-                    <div class="stat-value" id="statEntregues">0</div>
+                    <div class="stat-label">Fora do Prazo</div>
+                    <div class="stat-value stat-warning" id="statForaPrazo">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Pendentes</div>
-                    <div class="stat-value" id="statPendentes">0</div>
+                    <div class="stat-label">Entregas Realizadas</div>
+                    <div class="stat-value stat-success" id="statEntregues">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Frete Total</div>
+                    <div class="stat-value stat-primary" id="statFrete">R$ 0,00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Valor Total</div>
+                    <div class="stat-value stat-primary" id="statValorTotal">R$ 0,00</div>
                 </div>
             </div>
 
@@ -91,7 +95,6 @@
     </div>
 
     <script>
-        // Esconder splash após 3 segundos
         setTimeout(() => {
             const splash = document.getElementById('splashScreen');
             if (splash) splash.style.display = 'none';
