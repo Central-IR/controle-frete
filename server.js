@@ -8,9 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==========================================
-// ======== CONFIGURAÇÃO DO SUPABASE ========
-// ==========================================
+// CONFIGURAÇÃO DO SUPABASE
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -22,111 +20,65 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 console.log('✅ Supabase configurado:', supabaseUrl);
 
-// ==========================================
-// ======== MIDDLEWARES GERAIS ==============
-// ==========================================
+// MIDDLEWARES
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token']
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Log detalhado de requisições
+// Log de requisições
 app.use((req, res, next) => {
     console.log(`📥 ${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
 });
 
-// ==========================================
-// ======== ARQUIVO DE LOG ==================
-// ==========================================
-const logFilePath = path.join(__dirname, 'acessos.log');
-
-function registrarAcesso(req, res, next) {
-    const xForwardedFor = req.headers['x-forwarded-for'];
-    const clientIP = xForwardedFor
-        ? xForwardedFor.split(',')[0].trim()
-        : req.socket.remoteAddress;
-
-    const cleanIP = clientIP.replace('::ffff:', '');
-    const logEntry = `[${new Date().toISOString()}] IP: ${cleanIP} Rota: ${req.path}\n`;
-
-    fs.appendFile(logFilePath, logEntry, (err) => {
-        if (err) console.error('Erro ao gravar log:', err);
-    });
-
-    next();
-}
-
-app.use(registrarAcesso);
-
-// ==========================================
-// ======== MIDDLEWARE DE AUTENTICAÇÃO ======
-// ==========================================
+// AUTENTICAÇÃO
 const PORTAL_URL = process.env.PORTAL_URL || 'https://ir-comercio-portal-zcan.onrender.com';
 
-console.log('🔐 Portal URL configurado:', PORTAL_URL);
-
 async function verificarAutenticacao(req, res, next) {
-    // Rotas públicas que NÃO precisam de autenticação
-    const publicPaths = ['/', '/health', '/app'];
+    const publicPaths = ['/', '/health'];
     if (publicPaths.includes(req.path)) {
         return next();
     }
 
-    // Pegar token da sessão
-    const sessionToken = req.headers['x-session-token'] || req.query.sessionToken;
-
-    console.log('🔑 Token recebido:', sessionToken ? `${sessionToken.substring(0, 20)}...` : 'NENHUM');
+    const sessionToken = req.headers['x-session-token'];
 
     if (!sessionToken) {
-        console.log('❌ Token não encontrado');
         return res.status(401).json({
             error: 'Não autenticado',
-            message: 'Token de sessão não encontrado',
-            redirectToLogin: true
+            message: 'Token de sessão não encontrado'
         });
     }
 
     try {
-        console.log('🔍 Verificando sessão no portal:', PORTAL_URL);
-        
         const verifyResponse = await fetch(`${PORTAL_URL}/api/verify-session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionToken })
         });
 
-        console.log('📊 Resposta do portal:', verifyResponse.status);
-
         if (!verifyResponse.ok) {
-            console.log('❌ Resposta não OK do portal');
             return res.status(401).json({
                 error: 'Sessão inválida',
-                message: 'Sua sessão expirou ou foi invalidada',
-                redirectToLogin: true
+                message: 'Sua sessão expirou'
             });
         }
 
         const sessionData = await verifyResponse.json();
-        console.log('📋 Dados da sessão:', sessionData.valid ? 'VÁLIDA' : 'INVÁLIDA');
 
         if (!sessionData.valid) {
-            console.log('❌ Sessão marcada como inválida pelo portal');
             return res.status(401).json({
                 error: 'Sessão inválida',
-                message: sessionData.message || 'Sua sessão expirou',
-                redirectToLogin: true
+                message: sessionData.message || 'Sua sessão expirou'
             });
         }
 
         req.user = sessionData.session;
         req.sessionToken = sessionToken;
-
-        console.log('✅ Autenticação bem-sucedida para:', sessionData.session?.username);
         next();
     } catch (error) {
         console.error('❌ Erro ao verificar autenticação:', error);
@@ -137,31 +89,12 @@ async function verificarAutenticacao(req, res, next) {
     }
 }
 
-// ==========================================
-// ======== SERVIR ARQUIVOS ESTÁTICOS =======
-// ==========================================
+// SERVIR ARQUIVOS ESTÁTICOS
 const publicPath = path.join(__dirname, 'public');
-console.log('📁 Pasta public:', publicPath);
+app.use(express.static(publicPath));
 
-app.use(express.static(publicPath, {
-    index: 'index.html',
-    dotfiles: 'deny',
-    setHeaders: (res, path) => {
-        if (path.endsWith('.html')) {
-            res.setHeader('Content-Type', 'text/html');
-        } else if (path.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-        } else if (path.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-        }
-    }
-}));
-
-// ==========================================
-// ======== HEALTH CHECK (PÚBLICO) ==========
-// ==========================================
+// HEALTH CHECK
 app.get('/health', async (req, res) => {
-    console.log('💚 Health check requisitado');
     try {
         const { error } = await supabase
             .from('controle_frete')
@@ -170,11 +103,7 @@ app.get('/health', async (req, res) => {
         res.json({
             status: error ? 'unhealthy' : 'healthy',
             database: error ? 'disconnected' : 'connected',
-            supabase_url: supabaseUrl,
-            portal_url: PORTAL_URL,
             timestamp: new Date().toISOString(),
-            publicPath: publicPath,
-            authentication: 'enabled',
             service: 'Controle de Frete API'
         });
     } catch (error) {
@@ -186,27 +115,19 @@ app.get('/health', async (req, res) => {
     }
 });
 
-// ==========================================
-// ======== ROTAS DA API ====================
-// ==========================================
-
-// Aplicar autenticação em todas as rotas da API
+// ROTAS DA API
 app.use('/api', verificarAutenticacao);
 
 // GET - Listar todos os fretes
 app.get('/api/fretes', async (req, res) => {
     try {
-        console.log('🔍 Buscando todos os fretes...');
-        
-        const { data: fretes, error } = await supabase
+        const { data, error } = await supabase
             .from('controle_frete')
             .select('*')
             .order('data_emissao', { ascending: false });
 
         if (error) throw error;
-
-        console.log(`✅ ${fretes.length} fretes encontrados`);
-        res.json(fretes);
+        res.json(data);
     } catch (error) {
         console.error('❌ Erro ao buscar fretes:', error);
         res.status(500).json({ 
@@ -216,11 +137,10 @@ app.get('/api/fretes', async (req, res) => {
     }
 });
 
-// GET - Buscar frete por ID
+// GET - Buscar por ID
 app.get('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`🔍 Buscando frete ID: ${id}`);
 
         const { data, error } = await supabase
             .from('controle_frete')
@@ -234,7 +154,6 @@ app.get('/api/fretes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Frete não encontrado' });
         }
 
-        console.log('✅ Frete encontrado');
         res.json(data);
     } catch (error) {
         console.error('❌ Erro ao buscar frete:', error);
@@ -245,42 +164,32 @@ app.get('/api/fretes/:id', async (req, res) => {
     }
 });
 
-// POST - Criar novo frete
+// POST - Criar frete
 app.post('/api/fretes', async (req, res) => {
     try {
-        console.log('📝 Criando novo frete:', req.body);
+        console.log('📝 Criando frete:', req.body);
         
         const {
             numero_nf,
             data_emissao,
+            documento,
             valor_nf,
-            transportadora,
-            codigo_rastreio,
-            valor_frete,
-            cidade_origem,
-            uf_origem,
-            cidade_destino,
-            uf_destino,
-            data_coleta,
-            previsao_entrega,
-            data_entrega_real,
-            status,
-            responsavel,
+            nome_orgao,
+            contato_orgao,
             vendedor,
-            observacoes
+            transportadora,
+            valor_frete,
+            data_coleta,
+            cidade_destino,
+            previsao_entrega,
+            status
         } = req.body;
 
-        // Validações básicas
-        if (!numero_nf || !data_emissao || !valor_nf || !transportadora || !valor_frete ||
-            !cidade_origem || !uf_origem || !cidade_destino || !uf_destino ||
-            !previsao_entrega || !responsavel) {
+        // Validações
+        if (!numero_nf || !data_emissao || !documento || !valor_nf || !nome_orgao ||
+            !vendedor || !transportadora || !valor_frete || !cidade_destino || !previsao_entrega) {
             return res.status(400).json({ 
-                error: 'Campos obrigatórios faltando',
-                campos_obrigatorios: [
-                    'numero_nf', 'data_emissao', 'valor_nf', 'transportadora', 
-                    'valor_frete', 'cidade_origem', 'uf_origem', 'cidade_destino', 
-                    'uf_destino', 'previsao_entrega', 'responsavel'
-                ]
+                error: 'Campos obrigatórios faltando'
             });
         }
 
@@ -289,21 +198,17 @@ app.post('/api/fretes', async (req, res) => {
             .insert([{
                 numero_nf,
                 data_emissao,
+                documento,
                 valor_nf,
+                nome_orgao,
+                contato_orgao: contato_orgao || null,
+                vendedor,
                 transportadora,
-                codigo_rastreio: codigo_rastreio || null,
                 valor_frete,
-                cidade_origem,
-                uf_origem,
-                cidade_destino,
-                uf_destino,
                 data_coleta: data_coleta || null,
+                cidade_destino,
                 previsao_entrega,
-                data_entrega_real: data_entrega_real || null,
-                status: status || 'EM_TRANSITO',
-                responsavel,
-                vendedor: vendedor || null,
-                observacoes: observacoes || null
+                status: status || 'EM_TRANSITO'
             }])
             .select()
             .single();
@@ -325,26 +230,22 @@ app.post('/api/fretes', async (req, res) => {
 app.put('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`✏️ Atualizando frete ID: ${id}`);
+        console.log(`✏️ Atualizando frete: ${id}`);
         
         const {
             numero_nf,
             data_emissao,
+            documento,
             valor_nf,
-            transportadora,
-            codigo_rastreio,
-            valor_frete,
-            cidade_origem,
-            uf_origem,
-            cidade_destino,
-            uf_destino,
-            data_coleta,
-            previsao_entrega,
-            data_entrega_real,
-            status,
-            responsavel,
+            nome_orgao,
+            contato_orgao,
             vendedor,
-            observacoes
+            transportadora,
+            valor_frete,
+            data_coleta,
+            cidade_destino,
+            previsao_entrega,
+            status
         } = req.body;
 
         const { data, error } = await supabase
@@ -352,21 +253,17 @@ app.put('/api/fretes/:id', async (req, res) => {
             .update({
                 numero_nf,
                 data_emissao,
+                documento,
                 valor_nf,
-                transportadora,
-                codigo_rastreio,
-                valor_frete,
-                cidade_origem,
-                uf_origem,
-                cidade_destino,
-                uf_destino,
-                data_coleta,
-                previsao_entrega,
-                data_entrega_real,
-                status,
-                responsavel,
+                nome_orgao,
+                contato_orgao,
                 vendedor,
-                observacoes
+                transportadora,
+                valor_frete,
+                data_coleta,
+                cidade_destino,
+                previsao_entrega,
+                status
             })
             .eq('id', id)
             .select()
@@ -393,7 +290,7 @@ app.put('/api/fretes/:id', async (req, res) => {
 app.delete('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`🗑️ Deletando frete ID: ${id}`);
+        console.log(`🗑️ Deletando frete: ${id}`);
 
         const { error } = await supabase
             .from('controle_frete')
@@ -413,44 +310,25 @@ app.delete('/api/fretes/:id', async (req, res) => {
     }
 });
 
-// ==========================================
-// ======== ROTA PRINCIPAL (PÚBLICO) ========
-// ==========================================
+// ROTA PRINCIPAL
 app.get('/', (req, res) => {
     res.json({ 
         status: 'online',
         service: 'Controle de Frete API',
-        version: '1.0.0',
-        timestamp: new Date().toISOString(),
-        endpoints: {
-            health: '/health',
-            fretes: '/api/fretes',
-            create: 'POST /api/fretes',
-            update: 'PUT /api/fretes/:id',
-            delete: 'DELETE /api/fretes/:id'
-        }
+        version: '2.0.0',
+        timestamp: new Date().toISOString()
     });
 });
 
-app.get('/app', (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'));
-});
-
-// ==========================================
-// ======== ROTA 404 ========================
-// ==========================================
+// ROTA 404
 app.use((req, res) => {
-    console.log('❌ Rota não encontrada:', req.path);
     res.status(404).json({
         error: '404 - Rota não encontrada',
-        path: req.path,
-        message: 'Esta rota não existe na API'
+        path: req.path
     });
 });
 
-// ==========================================
-// ======== TRATAMENTO DE ERROS =============
-// ==========================================
+// TRATAMENTO DE ERROS
 app.use((error, req, res, next) => {
     console.error('💥 Erro no servidor:', error);
     res.status(500).json({
@@ -459,29 +337,14 @@ app.use((error, req, res, next) => {
     });
 });
 
-// ==========================================
-// ======== INICIAR SERVIDOR ================
-// ==========================================
+// INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 ================================');
-    console.log(`🚀 Controle de Frete API v1.0.0`);
+    console.log(`🚀 Controle de Frete API v2.0.0`);
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    console.log(`📊 Database: Supabase`);
     console.log(`🔗 Supabase URL: ${supabaseUrl}`);
     console.log(`📁 Public folder: ${publicPath}`);
-    console.log(`🔐 Autenticação: Ativa ✅`);
+    console.log(`🔐 Autenticação: Ativa`);
     console.log(`🌐 Portal URL: ${PORTAL_URL}`);
-    console.log(`🔓 Rotas públicas: /, /health, /app`);
-    console.log(`📋 Tabela: controle_frete`);
     console.log('🚀 ================================\n');
 });
-
-// Verificar se pasta public existe
-if (!fs.existsSync(publicPath)) {
-    console.error('⚠️ AVISO: Pasta public/ não encontrada!');
-    console.error('📁 Crie a pasta e adicione os arquivos:');
-    console.error('   - public/index.html');
-    console.error('   - public/style.css');
-    console.error('   - public/script.js');
-    console.error('   - public/I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png');
-}
