@@ -3,272 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
     <title>Controle de Frete</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Status de Conexão FIXO no canto superior direito -->
-    <div id="connectionStatus" class="connection-status">
-        <span class="status-dot"></span>
-        <span>Conectando...</span>
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splashScreen">
+        <h1 class="splash-title">Controle de Frete</h1>
     </div>
 
-    <div class="container">
-        <!-- Cabeçalho -->
-        <div class="header">
-            <h1>Controle de Frete</h1>
-        </div>
-
-        <div id="statusMessage" class="hidden"></div>
-
-        <!-- Dashboard (sem funcionalidade de filtro) -->
-        <div class="dashboard">
-            <div class="dashboard-card success">
-                <h3>Entregas Realizadas</h3>
-                <div class="value" id="totalEntregues">0</div>
-            </div>
-            <div class="dashboard-card">
-                <h3>Em Trânsito</h3>
-                <div class="value" id="totalEmRota">0</div>
-            </div>
-            <div class="dashboard-card danger">
-                <h3>Fora do Prazo</h3>
-                <div class="value" id="totalForaPrazo">0</div>
-            </div>
-        </div>
-
-        <button onclick="openFormModal()" style="margin-bottom: 2rem;">
-            Registrar NF
-        </button>
-
-        <div class="card">
-            <div class="month-selector">
-                <button onclick="changeMonth(-1)">← Anterior</button>
-                <span id="currentMonth"></span>
-                <button onclick="changeMonth(1)">Próximo →</button>
-            </div>
-
-            <!-- Filtros atualizados com Status -->
-            <div class="filter-section">
-                <div class="form-group">
-                    <label for="search">Pesquisar</label>
-                    <input type="text" id="search" placeholder="Digite NF, órgão, destino..." oninput="filterFretes()">
-                </div>
-
-                <div class="form-group">
-                    <label for="filterVendedor">Filtrar por Vendedor</label>
-                    <select id="filterVendedor" onchange="filterFretes()">
-                        <option value="">Todos</option>
-                        <option value="Miguel">Miguel</option>
-                        <option value="Roberto">Roberto</option>
-                        <option value="Isaque">Isaque</option>
-                        <option value="Gustavo">Gustavo</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="filterTransportadora">Filtrar por Transporte</label>
-                    <select id="filterTransportadora" onchange="filterFretes()">
-                        <option value="">Todas</option>
-                        <option value="TNT Mercurio">TNT Mercurio</option>
-                        <option value="CORREIOS">CORREIOS</option>
-                        <option value="BRASPRESS">BRASPRESS</option>
-                        <option value="CONTINENTAL">CONTINENTAL</option>
-                        <option value="JAMEF">JAMEF</option>
-                        <option value="Fornecedor">Fornecedor</option>
-                        <option value="Entrega Própria">Entrega Própria</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="filterStatus">Filtrar por Status</label>
-                    <select id="filterStatus" onchange="filterFretes()">
-                        <option value="">Todos</option>
-                        <option value="Entregue">Entregue</option>
-                        <option value="Em Trânsito">Em Trânsito</option>
-                        <option value="Fora do Prazo">Fora do Prazo</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <button class="secondary" onclick="clearFilters();" style="width: 100%; margin: 0;">
-                        Limpar Filtros
-                    </button>
+    <!-- Conteúdo Principal -->
+    <div class="app-content">
+        <div class="container">
+            <div class="header">
+                <h1>Controle de Frete</h1>
+                <div id="connectionStatus" class="connection-status offline">
+                    <span class="status-dot"></span>
                 </div>
             </div>
-        </div>
 
-        <!-- Tabela de Fretes -->
-        <div class="card">
-            <h2>Monitoramento</h2>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 80px;">Entregue</th>
-                            <th>NF</th>
-                            <th>Valor</th>
-                            <th>Vendedor</th>
-                            <th>Transporte</th>
-                            <th>Destino</th>
-                            <th>Entrega</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="fretesContainer">
-                        <tr>
-                            <td colspan="9" style="text-align: center; padding: 2rem;">
-                                Carregando dados...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="button-wrapper">
+                <button onclick="toggleForm()" class="register">Registrar Frete</button>
             </div>
-        </div>
-    </div>
 
-    <!-- Modal de Formulário -->
-    <div id="formModal" class="modal-overlay">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3 id="formTitle">Novo Registro de Frete</h3>
-                <button class="close-modal" onclick="closeFormModal()">×</button>
+            <!-- Dashboard Sutil -->
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total de Fretes</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Em Trânsito</div>
+                    <div class="stat-value" id="statTransito">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Entregues</div>
+                    <div class="stat-value" id="statEntregues">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pendentes</div>
+                    <div class="stat-value" id="statPendentes">0</div>
+                </div>
             </div>
-            <form id="freteForm">
-                <input type="hidden" id="editId">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="numeroNF">Número da Nota Fiscal *</label>
-                        <input type="text" id="numeroNF" required placeholder="Ex: 3283">
-                    </div>
 
+            <!-- FILTROS -->
+            <div class="card">
+                <h2>Filtros</h2>
+                <div class="filter-section">
                     <div class="form-group">
-                        <label for="dataEmissao">Data de Emissão *</label>
-                        <input type="date" id="dataEmissao" required>
+                        <label for="search">Pesquisar</label>
+                        <input type="text" id="search" placeholder="NF, rastreio, transportadora..." oninput="filterFretes()">
                     </div>
-
                     <div class="form-group">
-                        <label for="numeroDocumento">Número do Documento</label>
-                        <input type="text" id="numeroDocumento" placeholder="Ex: EMPENHO 2025/1896">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="valor">Valor da Nota (R$) *</label>
-                        <input type="number" id="valor" step="0.01" min="0" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="orgao">Nome do Órgão *</label>
-                        <input type="text" id="orgao" required placeholder="Ex: HOSPITAL REGIONAL DE ASSIS">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="contatoOrgao">Contato do Órgão</label>
-                        <input type="text" id="contatoOrgao" placeholder="Ex: (18) 3302-6000">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="vendedor">Vendedor Responsável *</label>
-                        <select id="vendedor" required>
-                            <option value="">Selecione...</option>
-                            <option value="Miguel">Miguel</option>
-                            <option value="Roberto">Roberto</option>
-                            <option value="Isaque">Isaque</option>
-                            <option value="Gustavo">Gustavo</option>
+                        <label for="filterTransportadora">Transportadora</label>
+                        <select id="filterTransportadora" onchange="filterFretes()">
+                            <option value="">Todas</option>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label for="transportadora">Transporte *</label>
-                        <select id="transportadora" required>
-                            <option value="">Selecione...</option>
-                            <option value="TNT Mercurio">TNT Mercurio</option>
-                            <option value="CORREIOS">Correios</option>
-                            <option value="BRASPRESS">Braspress</option>
-                            <option value="CONTINENTAL">Continental</option>
-                            <option value="JAMEF">Jamef</option>
-                            <option value="Fornecedor">Fornecedor</option>
-                            <option value="Entrega Própria">Entrega Própria</option>
+                        <label for="filterStatus">Status</label>
+                        <select id="filterStatus" onchange="filterFretes()">
+                            <option value="">Todos</option>
+                            <option value="AGUARDANDO_COLETA">Aguardando Coleta</option>
+                            <option value="EM_TRANSITO">Em Trânsito</option>
+                            <option value="EM_ROTA_ENTREGA">Em Rota de Entrega</option>
+                            <option value="ENTREGUE">Entregue</option>
+                            <option value="DEVOLVIDO">Devolvido</option>
+                            <option value="EXTRAVIADO">Extraviado</option>
+                            <option value="CANCELADO">Cancelado</option>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label for="valorFrete">Valor do Frete (R$) *</label>
-                        <input type="number" id="valorFrete" step="0.01" min="0" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="dataColeta">Data da Coleta *</label>
-                        <input type="date" id="dataColeta" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="destino">Cidade-UF de Destino *</label>
-                        <input type="text" id="destino" required placeholder="Ex: Assis - SP">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="dataEntrega">Data de Entrega *</label>
-                        <input type="date" id="dataEntrega" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="statusEspecial">Status Especial (Opcional)</label>
-                        <select id="statusEspecial">
-                            <option value="">Nenhum</option>
-                            <option value="Devolução">Devolução</option>
-                            <option value="Simples Remessa">Simples Remessa</option>
-                            <option value="Remessa de Amostra">Remessa de Amostra</option>
-                            <option value="Cancelada">Cancelada</option>
+                        <label for="filterResponsavel">Responsável</label>
+                        <select id="filterResponsavel" onchange="filterFretes()">
+                            <option value="">Todos</option>
                         </select>
                     </div>
                 </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="secondary" onclick="closeFormModal()">
-                        Cancelar
-                    </button>
-                    <button type="submit">
-                        <span id="submitIcon">✓</span>
-                        <span id="submitText">Registrar Frete</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal de Informações -->
-    <div id="infoModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 1400px;">
-            <div class="modal-header">
-                <h3>Informações - NF <span id="modalNF"></span></h3>
-                <button class="close-modal" onclick="closeInfoModal()">×</button>
             </div>
-            <div id="modalInfoContent"></div>
-            <div class="modal-actions">
-                <button class="secondary" onclick="closeInfoModal()">Fechar</button>
+
+            <!-- LISTA DE FRETES -->
+            <div class="card">
+                <h2>Lista de Fretes</h2>
+                <div id="fretesContainer"></div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Observações -->
-    <div id="observacoesModal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 700px;">
-            <div class="modal-header">
-                <h3>Observações - NF <span id="obsModalNF"></span></h3>
-                <button class="close-modal" onclick="closeObservacoesModal()">×</button>
-            </div>
-            <div style="margin-bottom: 1.5rem;">
-                <textarea id="novaObservacao" placeholder="Digite sua observação aqui..." style="min-height: 100px; margin-bottom: 1rem;"></textarea>
-                <button onclick="adicionarObservacao()" class="success">Adicionar Observação</button>
-            </div>
-            <div id="listaObservacoes"></div>
-        </div>
-    </div>
-
+    <script>
+        // Esconder splash após 3 segundos
+        setTimeout(() => {
+            const splash = document.getElementById('splashScreen');
+            if (splash) splash.style.display = 'none';
+        }, 3000);
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
