@@ -6,7 +6,7 @@ const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const PORT = process.env.PORT || 3004;
+const PORT = process.env.PORT || 3000;
 
 // ==========================================
 // ======== CONFIGURAÇÃO DO SUPABASE ========
@@ -164,7 +164,7 @@ app.get('/health', async (req, res) => {
     console.log('💚 Health check requisitado');
     try {
         const { error } = await supabase
-            .from('fretes')
+            .from('controle_frete')
             .select('count', { count: 'exact', head: true });
         
         res.json({
@@ -174,7 +174,8 @@ app.get('/health', async (req, res) => {
             portal_url: PORTAL_URL,
             timestamp: new Date().toISOString(),
             publicPath: publicPath,
-            authentication: 'enabled'
+            authentication: 'enabled',
+            service: 'Controle de Frete API'
         });
     } catch (error) {
         res.json({
@@ -192,86 +193,118 @@ app.get('/health', async (req, res) => {
 // Aplicar autenticação em todas as rotas da API
 app.use('/api', verificarAutenticacao);
 
-// HEAD endpoint
-app.head('/api/fretes/:ano/:mes', (req, res) => {
-    res.status(200).end();
-});
-
-// Helper function para calcular status
-function calcularStatus(frete) {
-    if (frete.status_especial) {
-        return frete.status_especial;
-    }
-    
-    if (frete.entregue) {
-        return 'Entregue';
-    }
-    
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dataEntrega = new Date(frete.data_entrega);
-    dataEntrega.setHours(0, 0, 0, 0);
-    
-    if (dataEntrega < hoje) {
-        return 'Fora do Prazo';
-    }
-    
-    return 'Em Trânsito';
-}
-
-// GET - Buscar fretes por mês/ano
-app.get('/api/fretes/:ano/:mes', async (req, res) => {
+// GET - Listar todos os fretes
+app.get('/api/fretes', async (req, res) => {
     try {
-        const { ano, mes } = req.params;
-        console.log(`🔍 Buscando fretes para ${mes}/${ano}...`);
+        console.log('🔍 Buscando todos os fretes...');
         
-        const { data: fretes, error: fretesError } = await supabase
-            .from('fretes')
+        const { data: fretes, error } = await supabase
+            .from('controle_frete')
             .select('*')
-            .eq('ano', parseInt(ano))
-            .eq('mes', parseInt(mes))
-            .order('numero_nf', { ascending: true });
+            .order('data_emissao', { ascending: false });
 
-        if (fretesError) throw fretesError;
+        if (error) throw error;
 
-        // Buscar observações para cada frete
-        const fretesComObs = await Promise.all(fretes.map(async (frete) => {
-            const { data: observacoes, error: obsError } = await supabase
-                .from('frete_observacoes')
-                .select('*')
-                .eq('frete_id', frete.id)
-                .order('created_at', { ascending: false });
-
-            if (obsError) throw obsError;
-
-            return {
-                ...frete,
-                observacoes: observacoes || []
-            };
-        }));
-
-        console.log(`✅ ${fretesComObs.length} fretes encontrados`);
-        res.json(fretesComObs);
+        console.log(`✅ ${fretes.length} fretes encontrados`);
+        res.json(fretes);
     } catch (error) {
         console.error('❌ Erro ao buscar fretes:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: 'Erro ao buscar fretes',
+            details: error.message 
+        });
+    }
+});
+
+// GET - Buscar frete por ID
+app.get('/api/fretes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`🔍 Buscando frete ID: ${id}`);
+
+        const { data, error } = await supabase
+            .from('controle_frete')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: 'Frete não encontrado' });
+        }
+
+        console.log('✅ Frete encontrado');
+        res.json(data);
+    } catch (error) {
+        console.error('❌ Erro ao buscar frete:', error);
+        res.status(500).json({ 
+            error: 'Erro ao buscar frete',
+            details: error.message 
+        });
     }
 });
 
 // POST - Criar novo frete
 app.post('/api/fretes', async (req, res) => {
     try {
-        console.log('📝 Criando frete:', req.body);
-        const freteData = req.body;
+        console.log('📝 Criando novo frete:', req.body);
         
-        // Extrair mês e ano da data de emissão
-        const dataEmissao = new Date(freteData.data_emissao);
-        freteData.mes = dataEmissao.getMonth() + 1;
-        freteData.ano = dataEmissao.getFullYear();
+        const {
+            numero_nf,
+            data_emissao,
+            valor_nf,
+            transportadora,
+            codigo_rastreio,
+            valor_frete,
+            cidade_origem,
+            uf_origem,
+            cidade_destino,
+            uf_destino,
+            data_coleta,
+            previsao_entrega,
+            data_entrega_real,
+            status,
+            responsavel,
+            vendedor,
+            observacoes
+        } = req.body;
+
+        // Validações básicas
+        if (!numero_nf || !data_emissao || !valor_nf || !transportadora || !valor_frete ||
+            !cidade_origem || !uf_origem || !cidade_destino || !uf_destino ||
+            !previsao_entrega || !responsavel) {
+            return res.status(400).json({ 
+                error: 'Campos obrigatórios faltando',
+                campos_obrigatorios: [
+                    'numero_nf', 'data_emissao', 'valor_nf', 'transportadora', 
+                    'valor_frete', 'cidade_origem', 'uf_origem', 'cidade_destino', 
+                    'uf_destino', 'previsao_entrega', 'responsavel'
+                ]
+            });
+        }
 
         const { data, error } = await supabase
-            .from('fretes')
-            .insert([freteData])
+            .from('controle_frete')
+            .insert([{
+                numero_nf,
+                data_emissao,
+                valor_nf,
+                transportadora,
+                codigo_rastreio: codigo_rastreio || null,
+                valor_frete,
+                cidade_origem,
+                uf_origem,
+                cidade_destino,
+                uf_destino,
+                data_coleta: data_coleta || null,
+                previsao_entrega,
+                data_entrega_real: data_entrega_real || null,
+                status: status || 'EM_TRANSITO',
+                responsavel,
+                vendedor: vendedor || null,
+                observacoes: observacoes || null
+            }])
             .select()
             .single();
 
@@ -281,129 +314,102 @@ app.post('/api/fretes', async (req, res) => {
         res.status(201).json(data);
     } catch (error) {
         console.error('❌ Erro ao criar frete:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: 'Erro ao criar frete',
+            details: error.message 
+        });
     }
 });
 
 // PUT - Atualizar frete
 app.put('/api/fretes/:id', async (req, res) => {
     try {
-        console.log('✏️ Atualizando frete:', req.params.id);
         const { id } = req.params;
-        const freteData = req.body;
+        console.log(`✏️ Atualizando frete ID: ${id}`);
         
-        // Extrair mês e ano da data de emissão
-        const dataEmissao = new Date(freteData.data_emissao);
-        freteData.mes = dataEmissao.getMonth() + 1;
-        freteData.ano = dataEmissao.getFullYear();
+        const {
+            numero_nf,
+            data_emissao,
+            valor_nf,
+            transportadora,
+            codigo_rastreio,
+            valor_frete,
+            cidade_origem,
+            uf_origem,
+            cidade_destino,
+            uf_destino,
+            data_coleta,
+            previsao_entrega,
+            data_entrega_real,
+            status,
+            responsavel,
+            vendedor,
+            observacoes
+        } = req.body;
 
         const { data, error } = await supabase
-            .from('fretes')
-            .update(freteData)
+            .from('controle_frete')
+            .update({
+                numero_nf,
+                data_emissao,
+                valor_nf,
+                transportadora,
+                codigo_rastreio,
+                valor_frete,
+                cidade_origem,
+                uf_origem,
+                cidade_destino,
+                uf_destino,
+                data_coleta,
+                previsao_entrega,
+                data_entrega_real,
+                status,
+                responsavel,
+                vendedor,
+                observacoes
+            })
             .eq('id', id)
             .select()
             .single();
 
         if (error) throw error;
+
+        if (!data) {
+            return res.status(404).json({ error: 'Frete não encontrado' });
+        }
 
         console.log('✅ Frete atualizado');
         res.json(data);
     } catch (error) {
         console.error('❌ Erro ao atualizar frete:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// PATCH - Toggle entregue
-app.patch('/api/fretes/:id/toggle-entregue', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const { data: freteAtual, error: fetchError } = await supabase
-            .from('fretes')
-            .select('entregue')
-            .eq('id', id)
-            .single();
-
-        if (fetchError) throw fetchError;
-
-        const { data, error } = await supabase
-            .from('fretes')
-            .update({ entregue: !freteAtual.entregue })
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        res.json(data);
-    } catch (error) {
-        console.error('❌ Erro ao atualizar status de entrega:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: 'Erro ao atualizar frete',
+            details: error.message 
+        });
     }
 });
 
 // DELETE - Excluir frete
 app.delete('/api/fretes/:id', async (req, res) => {
     try {
-        console.log('🗑️ Deletando frete:', req.params.id);
         const { id } = req.params;
+        console.log(`🗑️ Deletando frete ID: ${id}`);
 
         const { error } = await supabase
-            .from('fretes')
+            .from('controle_frete')
             .delete()
             .eq('id', id);
 
         if (error) throw error;
 
         console.log('✅ Frete deletado');
-        res.status(204).end();
+        res.json({ message: 'Frete excluído com sucesso' });
     } catch (error) {
         console.error('❌ Erro ao excluir frete:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// POST - Adicionar observação
-app.post('/api/fretes/:id/observacoes', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { texto } = req.body;
-
-        const { data, error } = await supabase
-            .from('frete_observacoes')
-            .insert([{
-                frete_id: id,
-                texto: texto
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        res.status(201).json(data);
-    } catch (error) {
-        console.error('❌ Erro ao adicionar observação:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// DELETE - Excluir observação
-app.delete('/api/observacoes/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const { error } = await supabase
-            .from('frete_observacoes')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-
-        res.json({ message: 'Observação excluída com sucesso' });
-    } catch (error) {
-        console.error('❌ Erro ao excluir observação:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            error: 'Erro ao excluir frete',
+            details: error.message 
+        });
     }
 });
 
@@ -411,7 +417,19 @@ app.delete('/api/observacoes/:id', async (req, res) => {
 // ======== ROTA PRINCIPAL (PÚBLICO) ========
 // ==========================================
 app.get('/', (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'));
+    res.json({ 
+        status: 'online',
+        service: 'Controle de Frete API',
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/health',
+            fretes: '/api/fretes',
+            create: 'POST /api/fretes',
+            update: 'PUT /api/fretes/:id',
+            delete: 'DELETE /api/fretes/:id'
+        }
+    });
 });
 
 app.get('/app', (req, res) => {
@@ -425,7 +443,8 @@ app.use((req, res) => {
     console.log('❌ Rota não encontrada:', req.path);
     res.status(404).json({
         error: '404 - Rota não encontrada',
-        path: req.path
+        path: req.path,
+        message: 'Esta rota não existe na API'
     });
 });
 
@@ -445,6 +464,7 @@ app.use((error, req, res, next) => {
 // ==========================================
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 ================================');
+    console.log(`🚀 Controle de Frete API v1.0.0`);
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📊 Database: Supabase`);
     console.log(`🔗 Supabase URL: ${supabaseUrl}`);
@@ -452,6 +472,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🔐 Autenticação: Ativa ✅`);
     console.log(`🌐 Portal URL: ${PORTAL_URL}`);
     console.log(`🔓 Rotas públicas: /, /health, /app`);
+    console.log(`📋 Tabela: controle_frete`);
     console.log('🚀 ================================\n');
 });
 
@@ -462,4 +483,5 @@ if (!fs.existsSync(publicPath)) {
     console.error('   - public/index.html');
     console.error('   - public/style.css');
     console.error('   - public/script.js');
+    console.error('   - public/I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png');
 }
