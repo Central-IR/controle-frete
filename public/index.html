@@ -42,9 +42,10 @@
                     <div class="stat-label">Entregas Realizadas</div>
                     <div class="stat-value stat-success" id="statEntregues">0</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card stat-card-alert" id="cardForaPrazo">
                     <div class="stat-label">Fora do Prazo</div>
-                    <div class="stat-value stat-warning" id="statForaPrazo">0</div>
+                    <div class="stat-value stat-danger" id="statForaPrazo">0</div>
+                    <div class="pulse-badge" id="pulseBadge" style="display: none;">!</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Em Trânsito</div>
@@ -79,7 +80,6 @@
                         <select id="filterStatus" onchange="filterFretes()">
                             <option value="">Todos</option>
                             <optgroup label="Monitorados">
-                                <option value="AGUARDANDO_COLETA">Aguardando Coleta</option>
                                 <option value="EM_TRANSITO">Em Trânsito</option>
                                 <option value="EM_ROTA_ENTREGA">Em Rota de Entrega</option>
                                 <option value="ENTREGUE">Entregue</option>
@@ -89,7 +89,6 @@
                                 <option value="SIMPLES_REMESSA">Simples Remessa</option>
                                 <option value="REMESSA_AMOSTRA">Remessa de Amostra</option>
                                 <option value="CANCELADO">Cancelada</option>
-                                <option value="EXTRAVIADO">Extraviado</option>
                             </optgroup>
                         </select>
                     </div>
