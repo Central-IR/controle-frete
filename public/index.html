@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Frete</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Splash Screen -->
@@ -26,27 +27,36 @@
                 <button onclick="toggleForm()" class="register">Registrar Frete</button>
             </div>
 
+            <!-- NAVEGAÇÃO POR MESES -->
+            <div class="card">
+                <div class="month-navigation">
+                    <button onclick="previousMonth()" class="month-nav-btn">Anterior</button>
+                    <h3 id="currentMonthDisplay" class="month-display">Carregando...</h3>
+                    <button onclick="nextMonth()" class="month-nav-btn">Próximo</button>
+                </div>
+            </div>
+
             <!-- Dashboard Atualizado -->
             <div class="dashboard-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Em Trânsito</div>
-                    <div class="stat-value" id="statTransito">0</div>
+                    <div class="stat-label">Entregas Realizadas</div>
+                    <div class="stat-value stat-success" id="statEntregues">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Fora do Prazo</div>
                     <div class="stat-value stat-warning" id="statForaPrazo">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Entregas Realizadas</div>
-                    <div class="stat-value stat-success" id="statEntregues">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Frete Total</div>
-                    <div class="stat-value stat-primary" id="statFrete">R$ 0,00</div>
+                    <div class="stat-label">Em Trânsito</div>
+                    <div class="stat-value" id="statTransito">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Valor Total</div>
-                    <div class="stat-value stat-primary" id="statValorTotal">R$ 0,00</div>
+                    <div class="stat-value stat-success" id="statValorTotal">R$ 0,00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Frete Total</div>
+                    <div class="stat-value stat-gray" id="statFrete">R$ 0,00</div>
                 </div>
             </div>
 
@@ -68,13 +78,19 @@
                         <label for="filterStatus">Status</label>
                         <select id="filterStatus" onchange="filterFretes()">
                             <option value="">Todos</option>
-                            <option value="AGUARDANDO_COLETA">Aguardando Coleta</option>
-                            <option value="EM_TRANSITO">Em Trânsito</option>
-                            <option value="EM_ROTA_ENTREGA">Em Rota de Entrega</option>
-                            <option value="ENTREGUE">Entregue</option>
-                            <option value="DEVOLVIDO">Devolvido</option>
-                            <option value="EXTRAVIADO">Extraviado</option>
-                            <option value="CANCELADO">Cancelado</option>
+                            <optgroup label="Monitorados">
+                                <option value="AGUARDANDO_COLETA">Aguardando Coleta</option>
+                                <option value="EM_TRANSITO">Em Trânsito</option>
+                                <option value="EM_ROTA_ENTREGA">Em Rota de Entrega</option>
+                                <option value="ENTREGUE">Entregue</option>
+                            </optgroup>
+                            <optgroup label="Não Monitorados">
+                                <option value="DEVOLUCAO">Devolução</option>
+                                <option value="SIMPLES_REMESSA">Simples Remessa</option>
+                                <option value="REMESSA_AMOSTRA">Remessa de Amostra</option>
+                                <option value="CANCELADO">Cancelada</option>
+                                <option value="EXTRAVIADO">Extraviado</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="form-group">
