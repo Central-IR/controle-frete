@@ -9,13 +9,50 @@ let isOnline = false;
 let lastDataHash = '';
 let sessionToken = null;
 let currentTab = 0;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
 const tabs = ['tab-frete', 'tab-origem-destino', 'tab-datas', 'tab-observacoes'];
+
+const meses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
 
 console.log('Controle de Frete iniciada');
 
 document.addEventListener('DOMContentLoaded', () => {
     verificarAutenticacao();
 });
+
+// ============================================
+// NAVEGAÇÃO POR MESES
+// ============================================
+function updateMonthDisplay() {
+    const display = document.getElementById('currentMonthDisplay');
+    if (display) {
+        display.textContent = `${meses[currentMonth]} ${currentYear}`;
+    }
+    updateDashboard();
+    filterFretes();
+}
+
+window.previousMonth = function() {
+    currentMonth--;
+    if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+    }
+    updateMonthDisplay();
+};
+
+window.nextMonth = function() {
+    currentMonth++;
+    if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+    }
+    updateMonthDisplay();
+};
 
 // ============================================
 // AUTENTICAÇÃO
@@ -51,6 +88,7 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
 }
 
 function inicializarApp() {
+    updateMonthDisplay();
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
     startPolling();
@@ -152,41 +190,49 @@ function startPolling() {
 // ============================================
 function updateDashboard() {
     const hoje = new Date();
-    const mesAtual = hoje.getMonth();
-    const anoAtual = hoje.getFullYear();
     
-    // Filtrar fretes do mês atual
-    const fretesDoMes = fretes.filter(f => {
+    // Status monitorados
+    const statusMonitorados = ['AGUARDANDO_COLETA', 'EM_TRANSITO', 'EM_ROTA_ENTREGA', 'ENTREGUE'];
+    
+    // Filtrar apenas fretes monitorados do mês selecionado
+    const fretesMonitoradosDoMes = fretes.filter(f => {
         const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
-        return dataEmissao.getMonth() === mesAtual && dataEmissao.getFullYear() === anoAtual;
+        const mesCorreto = dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
+        return mesCorreto && statusMonitorados.includes(f.status);
     });
     
-    // Em Trânsito
-    const transito = fretes.filter(f => 
-        f.status === 'EM_TRANSITO' || f.status === 'EM_ROTA_ENTREGA'
-    ).length;
+    // Entregas Realizadas (do mês selecionado - monitorados)
+    const entregues = fretesMonitoradosDoMes.filter(f => f.status === 'ENTREGUE').length;
     
-    // Fora do Prazo (não entregues e previsão vencida)
-    const foraPrazo = fretes.filter(f => {
+    // Fora do Prazo (monitorados, não entregues, previsão vencida)
+    const foraPrazo = fretesMonitoradosDoMes.filter(f => {
         if (f.status === 'ENTREGUE') return false;
         const previsao = new Date(f.previsao_entrega + 'T00:00:00');
         return previsao < hoje;
     }).length;
     
-    // Entregas Realizadas (do mês)
-    const entregues = fretesDoMes.filter(f => f.status === 'ENTREGUE').length;
+    // Em Trânsito (monitorados ativos)
+    const transito = fretesMonitoradosDoMes.filter(f => 
+        f.status === 'EM_TRANSITO' || f.status === 'EM_ROTA_ENTREGA' || f.status === 'AGUARDANDO_COLETA'
+    ).length;
     
-    // Frete Total (do mês)
-    const freteTotal = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
+    // Todos os fretes do mês (incluindo não monitorados)
+    const todosFretesDoMes = fretes.filter(f => {
+        const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
+        return dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
+    });
     
-    // Valor Total (do mês)
-    const valorTotal = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
+    // Valor Total (todos do mês)
+    const valorTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
     
-    document.getElementById('statTransito').textContent = transito;
-    document.getElementById('statForaPrazo').textContent = foraPrazo;
+    // Frete Total (todos do mês)
+    const freteTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
+    
     document.getElementById('statEntregues').textContent = entregues;
-    document.getElementById('statFrete').textContent = `R$ ${freteTotal.toFixed(2).replace('.', ',')}`;
-    document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
+    document.getElementById('statForaPrazo').textContent = foraPrazo;
+    document.getElementById('statTransito').textContent = transito;
+    document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('statFrete').textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 }
 
 // ============================================
@@ -352,13 +398,19 @@ function showFormModal(editingId = null) {
                                 <div class="form-group">
                                     <label for="status">Status *</label>
                                     <select id="status" required>
-                                        <option value="AGUARDANDO_COLETA" ${frete?.status === 'AGUARDANDO_COLETA' ? 'selected' : ''}>Aguardando Coleta</option>
-                                        <option value="EM_TRANSITO" ${frete?.status === 'EM_TRANSITO' ? 'selected' : ''}>Em Trânsito</option>
-                                        <option value="EM_ROTA_ENTREGA" ${frete?.status === 'EM_ROTA_ENTREGA' ? 'selected' : ''}>Em Rota de Entrega</option>
-                                        <option value="ENTREGUE" ${frete?.status === 'ENTREGUE' ? 'selected' : ''}>Entregue</option>
-                                        <option value="DEVOLVIDO" ${frete?.status === 'DEVOLVIDO' ? 'selected' : ''}>Devolvido</option>
-                                        <option value="EXTRAVIADO" ${frete?.status === 'EXTRAVIADO' ? 'selected' : ''}>Extraviado</option>
-                                        <option value="CANCELADO" ${frete?.status === 'CANCELADO' ? 'selected' : ''}>Cancelado</option>
+                                        <optgroup label="Monitorados">
+                                            <option value="AGUARDANDO_COLETA" ${frete?.status === 'AGUARDANDO_COLETA' ? 'selected' : ''}>Aguardando Coleta</option>
+                                            <option value="EM_TRANSITO" ${frete?.status === 'EM_TRANSITO' ? 'selected' : ''}>Em Trânsito</option>
+                                            <option value="EM_ROTA_ENTREGA" ${frete?.status === 'EM_ROTA_ENTREGA' ? 'selected' : ''}>Em Rota de Entrega</option>
+                                            <option value="ENTREGUE" ${frete?.status === 'ENTREGUE' ? 'selected' : ''}>Entregue</option>
+                                        </optgroup>
+                                        <optgroup label="Não Monitorados">
+                                            <option value="DEVOLUCAO" ${frete?.status === 'DEVOLUCAO' ? 'selected' : ''}>Devolução</option>
+                                            <option value="SIMPLES_REMESSA" ${frete?.status === 'SIMPLES_REMESSA' ? 'selected' : ''}>Simples Remessa</option>
+                                            <option value="REMESSA_AMOSTRA" ${frete?.status === 'REMESSA_AMOSTRA' ? 'selected' : ''}>Remessa de Amostra</option>
+                                            <option value="CANCELADO" ${frete?.status === 'CANCELADO' ? 'selected' : ''}>Cancelada</option>
+                                            <option value="EXTRAVIADO" ${frete?.status === 'EXTRAVIADO' ? 'selected' : ''}>Extraviado</option>
+                                        </optgroup>
                                     </select>
                                 </div>
                             </div>
@@ -816,6 +868,12 @@ function filterFretes() {
     
     let filtered = [...fretes];
 
+    // Filtro por mês/ano selecionado
+    filtered = filtered.filter(f => {
+        const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
+        return dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
+    });
+
     if (filterTransportadora) {
         filtered = filtered.filter(f => f.transportadora === filterTransportadora);
     }
@@ -911,9 +969,11 @@ function getStatusBadge(status) {
         'EM_TRANSITO': { class: 'transito', text: 'Em Trânsito' },
         'EM_ROTA_ENTREGA': { class: 'rota', text: 'Em Rota de Entrega' },
         'ENTREGUE': { class: 'entregue', text: 'Entregue' },
-        'DEVOLVIDO': { class: 'devolvido', text: 'Devolvido' },
-        'EXTRAVIADO': { class: 'extraviado', text: 'Extraviado' },
-        'CANCELADO': { class: 'cancelado', text: 'Cancelado' }
+        'DEVOLUCAO': { class: 'devolvido', text: 'Devolução' },
+        'SIMPLES_REMESSA': { class: 'cancelado', text: 'Simples Remessa' },
+        'REMESSA_AMOSTRA': { class: 'cancelado', text: 'Remessa de Amostra' },
+        'CANCELADO': { class: 'cancelado', text: 'Cancelada' },
+        'EXTRAVIADO': { class: 'extraviado', text: 'Extraviado' }
     };
     
     const s = statusMap[status] || { class: 'transito', text: status };
