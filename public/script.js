@@ -975,8 +975,8 @@ function renderFretes(fretesToRender) {
                                 </div>
                             </td>
                             <td><strong>${f.numero_nf}</strong></td>
-                            <td>${formatDate(f.data_emissao)}</td>
-                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.nome_orgao}">${f.nome_orgao}</td>
+                            <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
+                            <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao}</td>
                             <td>${f.vendedor}</td>
                             <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.transportadora}">${f.transportadora}</td>
                             <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.cidade_destino}">${f.cidade_destino}</td>
