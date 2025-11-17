@@ -346,7 +346,7 @@ function showFormModal(editingId = null) {
                                 </div>
                                 <div class="form-group">
                                     <label for="documento">Documento *</label>
-                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="CPF/CNPJ" required>
+                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="2025NE1234" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="valor_nf">Valor da Nota (R$) *</label>
@@ -372,7 +372,6 @@ function showFormModal(editingId = null) {
                                         <option value="ROBERTO" ${frete?.vendedor === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
                                         <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
                                         <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
-                                        <option value="GUSTAVO" ${frete?.vendedor === 'GUSTAVO' ? 'selected' : ''}>GUSTAVO</option>
                                     </select>
                                 </div>
                             </div>
