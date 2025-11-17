@@ -363,7 +363,7 @@ function showFormModal(editingId = null) {
                                 </div>
                                 <div class="form-group">
                                     <label for="contato_orgao">Contato do Órgão</label>
-                                    <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}" placeholder="Telefone/E-mail">
+                                    <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}" placeholder="(27) 1234-1234">
                                 </div>
                                 <div class="form-group">
                                     <label for="vendedor">Vendedor Responsável *</label>
