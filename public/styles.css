@@ -269,55 +269,63 @@ h2 {
     box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
 }
 
-/* CHECKBOX CUSTOMIZADO - IGUAL COTAÇÕES */
-.checkbox-container {
+/* CHECKBOX CUSTOMIZADO - IDÊNTICO COTAÇÕES */
+.checkbox-wrapper {
     display: inline-block;
     position: relative;
 }
 
-.custom-checkbox {
+.styled-checkbox {
     position: absolute;
     opacity: 0;
     cursor: pointer;
+    width: 24px;
+    height: 24px;
 }
 
-.checkbox-label {
+.checkbox-label-styled {
     display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--text-secondary);
+    width: 24px;
+    height: 24px;
+    border: 2px solid #6B7280;
     border-radius: 4px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     position: relative;
-    background: var(--input-bg);
+    background: transparent;
 }
 
-.checkbox-label:hover {
-    border-color: var(--success-color);
+.checkbox-label-styled:hover {
+    border-color: #22C55E;
 }
 
-.custom-checkbox:checked + .checkbox-label {
-    background: var(--success-color);
-    border-color: var(--success-color);
+.styled-checkbox:checked + .checkbox-label-styled {
+    background: #22C55E;
+    border-color: #22C55E;
 }
 
-.custom-checkbox:checked + .checkbox-label::after {
+.styled-checkbox:checked + .checkbox-label-styled::after {
     content: '✓';
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: white;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
+    line-height: 1;
 }
 
+/* LINHA ENTREGUE - VERDE FRACO IGUAL COTAÇÕES */
 .row-entregue {
-    background-color: rgba(34, 197, 94, 0.08) !important;
+    background-color: rgba(34, 197, 94, 0.1) !important;
 }
 
 .row-entregue:hover {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+tbody tr:nth-child(even).row-entregue {
     background-color: rgba(34, 197, 94, 0.12) !important;
 }
 
