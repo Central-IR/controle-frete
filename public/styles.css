@@ -269,12 +269,57 @@ h2 {
     box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
 }
 
-/* CHECKBOX DE ENTREGA */
-.entregue-checkbox {
-    width: 18px;
-    height: 18px;
+/* CHECKBOX CUSTOMIZADO - IGUAL COTAÇÕES */
+.checkbox-container {
+    display: inline-block;
+    position: relative;
+}
+
+.custom-checkbox {
+    position: absolute;
+    opacity: 0;
     cursor: pointer;
-    accent-color: var(--success-color);
+}
+
+.checkbox-label {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    background: var(--input-bg);
+}
+
+.checkbox-label:hover {
+    border-color: var(--success-color);
+}
+
+.custom-checkbox:checked + .checkbox-label {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.custom-checkbox:checked + .checkbox-label::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.row-entregue {
+    opacity: 0.6;
+}
+
+.row-entregue td {
+    text-decoration: line-through;
+    color: var(--text-secondary);
 }
 
 .form-grid {
@@ -345,15 +390,24 @@ button.secondary { background: #4B5563; }
 button.small { padding: 8px 12px; font-size: 0.85rem; }
 
 .action-btn {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    margin: 0 4px;
-    min-width: 70px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    margin: 0 2px;
+    min-width: 60px;
+}
+
+@media (max-width: 1200px) {
+    .action-btn {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+        min-width: 50px;
+        margin: 0 1px;
+    }
 }
 
 .actions-cell { 
     white-space: nowrap;
-    min-width: 260px;
+    min-width: auto;
 }
 
 .filter-section {
@@ -369,31 +423,48 @@ table {
     border-radius: 8px;
     overflow: hidden;
     margin-top: 1rem;
+    table-layout: auto;
+    font-size: 0.85rem;
 }
 
 thead { background: var(--th-bg); }
 
 th {
-    padding: 16px 20px;
+    padding: 12px 8px;
     text-align: left;
     font-weight: 700;
     color: var(--th-color);
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     border-bottom: 1px solid var(--th-border);
+    white-space: nowrap;
 }
 
 td {
-    padding: 14px 20px;
+    padding: 10px 8px;
     border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--text-primary);
+    word-wrap: break-word;
 }
 
 tbody tr { background: var(--bg-card); }
 tbody tr:nth-child(even) { background: var(--table-stripe); }
 tbody tr:hover { background: var(--table-hover); }
+
+/* Responsividade */
+@media (max-width: 1400px) {
+    table { font-size: 0.8rem; }
+    th { font-size: 0.7rem; padding: 10px 6px; }
+    td { font-size: 0.8rem; padding: 8px 6px; }
+}
+
+@media (max-width: 1200px) {
+    table { font-size: 0.75rem; }
+    th { font-size: 0.65rem; padding: 8px 4px; }
+    td { font-size: 0.75rem; padding: 6px 4px; }
+}
 
 /* Badge de Status */
 .badge {
