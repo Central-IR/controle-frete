@@ -293,16 +293,17 @@ app.put('/api/fretes/:id', async (req, res) => {
 });
 
 // PATCH - Toggle status (checkbox)
-app.patch('/api/fretes/:id', async (req, res) => {
+app.patch('/api/fretes/:id', verificarToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
-
-        console.log(`🔄 Toggle status do frete ${id} para: ${status}`);
+        const { status, entregue } = req.body; // ← Incluir entregue
 
         const { data, error } = await supabase
-            .from('controle_frete')
-            .update({ status })
+            .from('fretes')
+            .update({
+                status,
+                entregue // ← Salvar este campo
+            })
             .eq('id', id)
             .select()
             .single();
