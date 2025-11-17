@@ -314,12 +314,11 @@ h2 {
 }
 
 .row-entregue {
-    opacity: 0.6;
+    background-color: rgba(34, 197, 94, 0.08) !important;
 }
 
-.row-entregue td {
-    text-decoration: line-through;
-    color: var(--text-secondary);
+.row-entregue:hover {
+    background-color: rgba(34, 197, 94, 0.12) !important;
 }
 
 .form-grid {
