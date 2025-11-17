@@ -480,41 +480,83 @@ function switchTab(index) {
 }
 
 // ============================================
-// SUBMIT
+// SUBMIT CORRIGIDO - CONTROLE DE FRETE
 // ============================================
+
 async function handleSubmit(event) {
     if (event) event.preventDefault();
 
+    // Coletar dados do formulário
     const formData = {
         numero_nf: document.getElementById('numero_nf').value.trim(),
         data_emissao: document.getElementById('data_emissao').value,
         documento: document.getElementById('documento').value.trim(),
         valor_nf: parseFloat(document.getElementById('valor_nf').value),
+        
+        // CAMPOS DO ÓRGÃO
         nome_orgao: document.getElementById('nome_orgao').value.trim(),
+        orgao: document.getElementById('nome_orgao').value.trim(), // ✅ ADICIONAR ESTE CAMPO para compatibilidade
         contato_orgao: document.getElementById('contato_orgao').value.trim(),
         vendedor: document.getElementById('vendedor').value.trim(),
+        vendedor_responsavel: document.getElementById('vendedor').value.trim(), // ✅ ADICIONAR ESTE CAMPO para compatibilidade
+        
+        // CAMPOS DO TRANSPORTE
         transportadora: document.getElementById('transportadora').value.trim(),
         valor_frete: parseFloat(document.getElementById('valor_frete').value),
-        data_coleta: document.getElementById('data_coleta').value,
+        data_coleta: document.getElementById('data_coleta').value || null,
         cidade_destino: document.getElementById('cidade_destino').value.trim(),
-        previsao_entrega: document.getElementById('previsao_entrega').value
-        // Status será calculado automaticamente pelo servidor
+        previsao_entrega: document.getElementById('previsao_entrega').value,
+        
+        // STATUS (deixar o servidor calcular ou definir padrão)
+        status: 'EM_TRANSITO', // ✅ Garantir que sempre tenha um status
+        entregue: false // ✅ Adicionar campo para sincronização
     };
+
+    // Remover campos vazios/null (exceto números e booleanos)
+    Object.keys(formData).forEach(key => {
+        if (formData[key] === '' || formData[key] === null) {
+            if (typeof formData[key] !== 'number' && typeof formData[key] !== 'boolean') {
+                delete formData[key];
+            }
+        }
+    });
 
     const editId = document.getElementById('editId').value;
 
+    // Se está editando, preservar timestamp
     if (editId) {
         const freteExistente = fretes.find(f => String(f.id) === String(editId));
         if (freteExistente) {
             formData.timestamp = freteExistente.timestamp;
+            formData.status = freteExistente.status; // Preservar status ao editar
+            formData.entregue = freteExistente.entregue || false;
         }
     }
 
+    // Verificar conexão
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
         closeFormModal();
         return;
     }
+
+    // Validações adicionais
+    if (!formData.numero_nf || !formData.data_emissao || !formData.documento) {
+        showMessage('Preencha todos os campos obrigatórios da Nota!', 'error');
+        return;
+    }
+
+    if (!formData.nome_orgao || !formData.vendedor) {
+        showMessage('Preencha todos os campos obrigatórios do Órgão!', 'error');
+        return;
+    }
+
+    if (!formData.transportadora || !formData.cidade_destino || !formData.previsao_entrega) {
+        showMessage('Preencha todos os campos obrigatórios do Transporte!', 'error');
+        return;
+    }
+
+    console.log('📤 Enviando dados:', formData); // ✅ LOG para debug
 
     try {
         const url = editId ? `${API_URL}/fretes/${editId}` : `${API_URL}/fretes`;
@@ -531,6 +573,9 @@ async function handleSubmit(event) {
             mode: 'cors'
         });
 
+        // Log da resposta para debug
+        console.log('📥 Status da resposta:', response.status);
+
         if (response.status === 401) {
             sessionStorage.removeItem('controleFreteSession');
             mostrarTelaAcessoNegado('Sua sessão expirou');
@@ -539,10 +584,12 @@ async function handleSubmit(event) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.details || 'Erro ao salvar');
+            console.error('❌ Erro do servidor:', errorData);
+            throw new Error(errorData.error || errorData.details || 'Erro ao salvar');
         }
 
         const savedData = await response.json();
+        console.log('✅ Dados salvos:', savedData);
 
         if (editId) {
             const index = fretes.findIndex(f => String(f.id) === String(editId));
@@ -561,25 +608,35 @@ async function handleSubmit(event) {
         closeFormModal();
 
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
         showMessage(`Erro: ${error.message}`, 'error');
-        closeFormModal();
     }
 }
 
 // ============================================
-// TOGGLE ENTREGUE (CHECKBOX)
+// TOGGLE ENTREGUE (CHECKBOX) - CORRIGIDO
 // ============================================
+
 window.toggleEntregue = async function(id) {
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
     if (!frete) return;
 
+    // Determinar novo status e campo entregue
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
+    const novoEntregue = novoStatus === 'ENTREGUE'; // ✅ ADICIONAR ESTE CAMPO!
+
+    console.log('🔄 Atualizando frete:', {
+        id: idStr,
+        status_atual: frete.status,
+        novo_status: novoStatus,
+        entregue: novoEntregue
+    });
 
     // Atualizar localmente
     frete.status = novoStatus;
+    frete.entregue = novoEntregue; // ✅ ATUALIZAR CAMPO ENTREGUE
     updateDashboard();
     filterFretes();
 
@@ -593,7 +650,10 @@ window.toggleEntregue = async function(id) {
                     'X-Session-Token': sessionToken,
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ status: novoStatus }),
+                body: JSON.stringify({ 
+                    status: novoStatus,
+                    entregue: novoEntregue // ✅ ENVIAR CAMPO ENTREGUE
+                }),
                 mode: 'cors'
             });
 
@@ -603,10 +663,18 @@ window.toggleEntregue = async function(id) {
             const index = fretes.findIndex(f => String(f.id) === idStr);
             if (index !== -1) fretes[index] = savedData;
 
+            console.log('✅ Frete atualizado no servidor:', savedData);
+            
+            // Mensagem de sucesso
+            if (novoEntregue) {
+                showMessage('Frete marcado como ENTREGUE! Aguarde 30s para aparecer no Contas a Receber.', 'success');
+            }
+
         } catch (error) {
-            console.error('Erro ao atualizar status:', error);
+            console.error('❌ Erro ao atualizar status:', error);
             // Reverter mudança
             frete.status = novoStatus === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
+            frete.entregue = !novoEntregue;
             updateDashboard();
             filterFretes();
             showMessage('Erro ao atualizar status', 'error');
