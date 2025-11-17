@@ -23,7 +23,7 @@ console.log('✅ Supabase configurado:', supabaseUrl);
 // MIDDLEWARES
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token']
 }));
 
@@ -292,18 +292,30 @@ app.put('/api/fretes/:id', async (req, res) => {
     }
 });
 
-// PATCH - Toggle status (checkbox)
-PATCH - Toggle status (checkbox)
+// PATCH - Atualizar status (checkbox de entrega)
 app.patch('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, entregue } = req.body;
+        const requestBody = req.body;
         
-        console.log(`🔄 Atualizando status do frete: ${id}`, { status, entregue });
+        console.log('🔄 Atualizando status do frete:', id);
+        console.log('📦 Body recebido:', requestBody);
 
         const updateData = {};
-        if (status !== undefined) updateData.status = status;
-        if (entregue !== undefined) updateData.entregue = entregue;
+        
+        if (requestBody.status !== undefined) {
+            updateData.status = requestBody.status;
+        }
+        
+        if (requestBody.entregue !== undefined) {
+            updateData.entregue = requestBody.entregue;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ 
+                error: 'Nenhum campo para atualizar' 
+            });
+        }
 
         const { data, error } = await supabase
             .from('controle_frete')
@@ -318,7 +330,7 @@ app.patch('/api/fretes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Frete não encontrado' });
         }
 
-        console.log('✅ Status atualizado');
+        console.log('✅ Status atualizado com sucesso');
         res.json(data);
     } catch (error) {
         console.error('❌ Erro ao atualizar status:', error);
