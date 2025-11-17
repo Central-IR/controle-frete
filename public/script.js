@@ -950,9 +950,8 @@ function renderFretes(fretesToRender) {
                         <th>Emissão</th>
                         <th>Órgão</th>
                         <th>Vendedor</th>
-                        <th>Transp.</th>
+                        <th>Transportadora</th>
                         <th>Destino</th>
-                        <th>Frete</th>
                         <th>Status</th>
                         <th style="text-align: center;">Ações</th>
                     </tr>
@@ -963,24 +962,23 @@ function renderFretes(fretesToRender) {
                         return `
                         <tr class="${isEntregue ? 'row-entregue' : ''}">
                             <td style="text-align: center; padding: 8px;">
-                                <div class="checkbox-container">
+                                <div class="checkbox-wrapper">
                                     <input 
                                         type="checkbox" 
                                         id="check-${f.id}"
                                         ${isEntregue ? 'checked' : ''}
                                         onchange="toggleEntregue('${f.id}')"
-                                        class="custom-checkbox"
+                                        class="styled-checkbox"
                                     >
-                                    <label for="check-${f.id}" class="checkbox-label"></label>
+                                    <label for="check-${f.id}" class="checkbox-label-styled"></label>
                                 </div>
                             </td>
                             <td><strong>${f.numero_nf}</strong></td>
                             <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
                             <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao}</td>
                             <td>${f.vendedor}</td>
-                            <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.transportadora}">${f.transportadora}</td>
-                            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.cidade_destino}">${f.cidade_destino}</td>
-                            <td style="white-space: nowrap;"><strong>R$ ${parseFloat(f.valor_frete).toFixed(2)}</strong></td>
+                            <td>${f.transportadora}</td>
+                            <td>${f.cidade_destino}</td>
                             <td>${getStatusBadge(f.status)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
