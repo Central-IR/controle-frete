@@ -943,44 +943,52 @@ function renderFretes(fretesToRender) {
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 50px; text-align: center;">✓</th>
+                        <th style="width: 40px; text-align: center;">
+                            <span style="font-size: 1.1rem;">✓</span>
+                        </th>
                         <th>NF</th>
-                        <th>Data Emissão</th>
+                        <th>Emissão</th>
                         <th>Órgão</th>
                         <th>Vendedor</th>
-                        <th>Transportadora</th>
+                        <th>Transp.</th>
                         <th>Destino</th>
-                        <th>Valor Frete</th>
+                        <th>Frete</th>
                         <th>Status</th>
-                        <th style="text-align: center; min-width: 260px;">Ações</th>
+                        <th style="text-align: center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${fretesToRender.map(f => `
-                        <tr>
-                            <td style="text-align: center;">
-                                <input 
-                                    type="checkbox" 
-                                    ${f.status === 'ENTREGUE' ? 'checked' : ''}
-                                    onchange="toggleEntregue('${f.id}')"
-                                    class="entregue-checkbox"
-                                >
+                    ${fretesToRender.map(f => {
+                        const isEntregue = f.status === 'ENTREGUE';
+                        return `
+                        <tr class="${isEntregue ? 'row-entregue' : ''}">
+                            <td style="text-align: center; padding: 8px;">
+                                <div class="checkbox-container">
+                                    <input 
+                                        type="checkbox" 
+                                        id="check-${f.id}"
+                                        ${isEntregue ? 'checked' : ''}
+                                        onchange="toggleEntregue('${f.id}')"
+                                        class="custom-checkbox"
+                                    >
+                                    <label for="check-${f.id}" class="checkbox-label"></label>
+                                </div>
                             </td>
                             <td><strong>${f.numero_nf}</strong></td>
                             <td>${formatDate(f.data_emissao)}</td>
-                            <td>${f.nome_orgao}</td>
+                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.nome_orgao}">${f.nome_orgao}</td>
                             <td>${f.vendedor}</td>
-                            <td>${f.transportadora}</td>
-                            <td>${f.cidade_destino}</td>
-                            <td><strong>R$ ${parseFloat(f.valor_frete).toFixed(2)}</strong></td>
+                            <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.transportadora}">${f.transportadora}</td>
+                            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${f.cidade_destino}">${f.cidade_destino}</td>
+                            <td style="white-space: nowrap;"><strong>R$ ${parseFloat(f.valor_frete).toFixed(2)}</strong></td>
                             <td>${getStatusBadge(f.status)}</td>
-                            <td class="actions-cell" style="text-align: center;">
-                                <button onclick="viewFrete('${f.id}')" class="action-btn view">Ver</button>
-                                <button onclick="editFrete('${f.id}')" class="action-btn edit">Editar</button>
-                                <button onclick="deleteFrete('${f.id}')" class="action-btn delete">Excluir</button>
+                            <td class="actions-cell" style="text-align: center; white-space: nowrap;">
+                                <button onclick="viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
+                                <button onclick="editFrete('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
+                                <button onclick="deleteFrete('${f.id}')" class="action-btn delete" title="Excluir">Excluir</button>
                             </td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
             </table>
         </div>
