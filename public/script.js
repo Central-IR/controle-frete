@@ -326,9 +326,9 @@ function showFormModal(editingId = null) {
                 
                 <div class="tabs-container">
                     <div class="tabs-nav">
-                        <button class="tab-btn active">Dados da Nota</button>
-                        <button class="tab-btn">Órgão</button>
-                        <button class="tab-btn">Transporte</button>
+                        <button class="tab-btn active" onclick="switchFormTab(0)">Dados da Nota</button>
+                        <button class="tab-btn" onclick="switchFormTab(1)">Órgão</button>
+                        <button class="tab-btn" onclick="switchFormTab(2)">Transporte</button>
                     </div>
 
                     <form id="freteForm" onsubmit="handleSubmit(event)">
@@ -414,8 +414,7 @@ function showFormModal(editingId = null) {
                         </div>
 
                         <div class="modal-actions">
-                            <button type="button" class="secondary" id="btnVoltar" onclick="previousTab()" style="display: none;">Voltar</button>
-                            <button type="button" class="secondary" id="btnProximo" onclick="nextTab()">Próximo</button>
+                            <button type="submit" class="save">${editingId ? 'Atualizar' : 'Salvar'}</button>
                             <button type="button" class="secondary" onclick="closeFormModal()">Cancelar</button>
                         </div>
                     </form>
@@ -425,8 +424,6 @@ function showFormModal(editingId = null) {
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    currentTab = 0;
-    updateNavigationButtons();
     
     // MAIÚSCULAS automáticas
     const camposMaiusculas = ['numero_nf', 'documento', 'nome_orgao', 'contato_orgao', 'cidade_destino'];
@@ -446,9 +443,6 @@ function showFormModal(editingId = null) {
 }
 
 function closeFormModal() {
-    const editId = document.getElementById('editId')?.value;
-    showMessage(editId ? 'Atualização cancelada' : 'Registro cancelado', 'error');
-    
     const modal = document.getElementById('formModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -459,6 +453,19 @@ function closeFormModal() {
 // ============================================
 // SISTEMA DE ABAS
 // ============================================
+window.switchFormTab = function(index) {
+    const tabButtons = document.querySelectorAll('#formModal .tab-btn');
+    const tabContents = document.querySelectorAll('#formModal .tab-content');
+    
+    tabButtons.forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+    });
+    
+    tabContents.forEach((content, i) => {
+        content.classList.toggle('active', i === index);
+    });
+};
+
 function switchTab(index) {
     currentTab = index;
     
@@ -471,58 +478,6 @@ function switchTab(index) {
     });
     
     updateNavigationButtons();
-}
-
-function nextTab() {
-    if (currentTab < tabs.length - 1) {
-        const currentTabElement = document.getElementById(tabs[currentTab]);
-        const requiredInputs = currentTabElement.querySelectorAll('[required]');
-        let isValid = true;
-
-        requiredInputs.forEach(input => {
-            if (!input.value.trim()) {
-                isValid = false;
-                input.focus();
-            }
-        });
-
-        if (!isValid) {
-            showMessage('Preencha todos os campos obrigatórios', 'error');
-            return;
-        }
-
-        currentTab++;
-        switchTab(currentTab);
-    } else {
-        handleSubmit(new Event('submit'));
-    }
-}
-
-function previousTab() {
-    if (currentTab > 0) {
-        currentTab--;
-        switchTab(currentTab);
-    }
-}
-
-function updateNavigationButtons() {
-    const btnVoltar = document.getElementById('btnVoltar');
-    const btnProximo = document.getElementById('btnProximo');
-    
-    if (btnVoltar) {
-        btnVoltar.style.display = currentTab === 0 ? 'none' : 'inline-flex';
-    }
-    
-    if (btnProximo) {
-        const editId = document.getElementById('editId')?.value;
-        if (currentTab === tabs.length - 1) {
-            btnProximo.textContent = editId ? 'Atualizar' : 'Salvar';
-            btnProximo.className = 'save';
-        } else {
-            btnProximo.textContent = 'Próximo';
-            btnProximo.className = 'secondary';
-        }
-    }
 }
 
 // ============================================
@@ -558,6 +513,7 @@ async function handleSubmit(event) {
 
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
+        closeFormModal();
         return;
     }
 
@@ -602,11 +558,12 @@ async function handleSubmit(event) {
         updateAllFilters();
         updateDashboard();
         filterFretes();
+        
+        closeFormModal();
 
     } catch (error) {
         console.error('Erro:', error);
         showMessage(`Erro: ${error.message}`, 'error');
-    } finally {
         closeFormModal();
     }
 }
