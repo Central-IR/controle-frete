@@ -63,26 +63,27 @@
 
             <!-- FILTROS -->
             <div class="card">
+                <h2>Filtros</h2>
                 <div class="filter-section">
                     <div class="form-group">
-                        <label for="search">Pesquisar:</label>
+                        <label for="search">Pesquisar</label>
                         <input type="text" id="search" placeholder="NF, rastreio, transportadora..." oninput="filterFretes()">
                     </div>
                     <div class="form-group">
-                        <label for="filterTransportadora">Filtrar por Transportadora:</label>
+                        <label for="filterTransportadora">Transportadora</label>
                         <select id="filterTransportadora" onchange="filterFretes()">
                             <option value="">Todas</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="filterStatus">Filtrar por Status:</label>
+                        <label for="filterStatus">Status</label>
                         <select id="filterStatus" onchange="filterFretes()">
                             <option value="">Todos</option>
                             <option value="FORA_DO_PRAZO">Fora do Prazo</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="filterVendedor">Filtrar por Vendedor:</label>
+                        <label for="filterVendedor">Vendedor</label>
                         <select id="filterVendedor" onchange="filterFretes()">
                             <option value="">Todos</option>
                         </select>
@@ -92,6 +93,7 @@
 
             <!-- LISTA DE FRETES -->
             <div class="card">
+                <h2>Lista de Fretes</h2>
                 <div id="fretesContainer"></div>
             </div>
         </div>
