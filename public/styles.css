@@ -270,28 +270,31 @@ h2 {
 }
 
 /* CHECKBOX CUSTOMIZADO - IDÊNTICO COTAÇÕES */
+/* CHECKBOX CUSTOMIZADO */
 .checkbox-wrapper {
-    display: inline-block;
-    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .styled-checkbox {
     position: absolute;
     opacity: 0;
     cursor: pointer;
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
 }
 
 .checkbox-label-styled {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     border: 2px solid #6B7280;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
-    position: relative;
     background: transparent;
 }
 
@@ -306,14 +309,9 @@ h2 {
 
 .styled-checkbox:checked + .checkbox-label-styled::after {
     content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     color: white;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
-    line-height: 1;
 }
 
 /* LINHA ENTREGUE - VERDE FRACO IGUAL COTAÇÕES */
@@ -431,27 +429,26 @@ table {
     overflow: hidden;
     margin-top: 1rem;
     table-layout: auto;
-    font-size: 0.85rem;
 }
 
 thead { background: var(--th-bg); }
 
 th {
-    padding: 12px 8px;
+    padding: 16px 20px;
     text-align: left;
     font-weight: 700;
     color: var(--th-color);
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     border-bottom: 1px solid var(--th-border);
     white-space: nowrap;
 }
 
 td {
-    padding: 10px 8px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--border-color);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--text-primary);
     word-wrap: break-word;
 }
