@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -175,30 +174,33 @@ app.post('/api/fretes', async (req, res) => {
             documento,
             valor_nf,
             nome_orgao,
+            orgao, // ← Aceitar ambos
             contato_orgao,
             vendedor,
+            vendedor_responsavel, // ← Aceitar ambos
             transportadora,
             valor_frete,
             data_coleta,
             cidade_destino,
-            previsao_entrega
+            previsao_entrega,
+            status
         } = req.body;
 
         // Validações
-        if (!numero_nf || !data_emissao || !documento || !valor_nf || !nome_orgao ||
-            !vendedor || !transportadora || !valor_frete || !cidade_destino || !previsao_entrega) {
+        if (!numero_nf || !data_emissao || !documento || !valor_nf || 
+            (!nome_orgao && !orgao) || (!vendedor && !vendedor_responsavel) ||
+            !transportadora || !valor_frete || !cidade_destino || !previsao_entrega) {
             return res.status(400).json({ 
                 error: 'Campos obrigatórios faltando'
             });
         }
 
-        // Calcular status automaticamente
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const dataPrevisao = new Date(previsao_entrega);
-        dataPrevisao.setHours(0, 0, 0, 0);
-        
-        const status = 'EM_TRANSITO'; // Sempre começa em trânsito
+        // Usar o campo que estiver preenchido
+        const orgaoFinal = orgao || nome_orgao;
+        const vendedorFinal = vendedor_responsavel || vendedor;
+
+        // Status inicial sempre EM_TRANSITO
+        const statusFinal = status || 'EM_TRANSITO';
 
         const { data, error } = await supabase
             .from('controle_frete')
@@ -207,15 +209,18 @@ app.post('/api/fretes', async (req, res) => {
                 data_emissao,
                 documento,
                 valor_nf,
-                nome_orgao,
+                nome_orgao: orgaoFinal,
+                orgao: orgaoFinal, // ← Salvar em ambos os campos
                 contato_orgao: contato_orgao || null,
-                vendedor,
+                vendedor: vendedorFinal,
+                vendedor_responsavel: vendedorFinal, // ← Salvar em ambos os campos
                 transportadora,
                 valor_frete,
                 data_coleta: data_coleta || null,
                 cidade_destino,
                 previsao_entrega,
-                status
+                status: statusFinal,
+                entregue: false // ← SEMPRE iniciar com false
             }])
             .select()
             .single();
@@ -233,11 +238,66 @@ app.post('/api/fretes', async (req, res) => {
     }
 });
 
-// PUT - Atualizar frete
+// PATCH - Atualizar status (DEVE VIR ANTES DO PUT!)
+app.patch('/api/fretes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, entregue } = req.body;
+        
+        console.log('🔄 PATCH /api/fretes/' + id);
+        console.log('📦 Body:', { status, entregue });
+
+        // Validar que pelo menos um campo foi enviado
+        if (status === undefined && entregue === undefined) {
+            return res.status(400).json({ 
+                error: 'Nenhum campo para atualizar',
+                message: 'Envie pelo menos "status" ou "entregue"'
+            });
+        }
+
+        // Montar objeto de atualização
+        const updateData = {};
+        if (status !== undefined) updateData.status = status;
+        if (entregue !== undefined) updateData.entregue = entregue;
+
+        console.log('📤 Dados a atualizar:', updateData);
+
+        // Atualizar no Supabase
+        const { data, error } = await supabase
+            .from('controle_frete')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Erro Supabase:', error);
+            throw error;
+        }
+
+        if (!data) {
+            return res.status(404).json({ error: 'Frete não encontrado' });
+        }
+
+        console.log('✅ Frete atualizado:', data);
+        console.log('   - Status:', data.status);
+        console.log('   - Entregue:', data.entregue);
+        
+        res.json(data);
+    } catch (error) {
+        console.error('❌ Erro ao atualizar status:', error);
+        res.status(500).json({ 
+            error: 'Erro ao atualizar status',
+            details: error.message 
+        });
+    }
+});
+
+// PUT - Atualizar frete completo (DEVE VIR DEPOIS DO PATCH!)
 app.put('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`✏️ Atualizando frete: ${id}`);
+        console.log(`✏️ PUT /api/fretes/${id}`);
         
         const {
             numero_nf,
@@ -245,8 +305,10 @@ app.put('/api/fretes/:id', async (req, res) => {
             documento,
             valor_nf,
             nome_orgao,
+            orgao,
             contato_orgao,
             vendedor,
+            vendedor_responsavel,
             transportadora,
             valor_frete,
             data_coleta,
@@ -254,7 +316,10 @@ app.put('/api/fretes/:id', async (req, res) => {
             previsao_entrega
         } = req.body;
 
-        // Status mantém o atual (não recalcula no update)
+        // Usar campos alternativos
+        const orgaoFinal = orgao || nome_orgao;
+        const vendedorFinal = vendedor_responsavel || vendedor;
+
         const { data, error } = await supabase
             .from('controle_frete')
             .update({
@@ -262,9 +327,11 @@ app.put('/api/fretes/:id', async (req, res) => {
                 data_emissao,
                 documento,
                 valor_nf,
-                nome_orgao,
+                nome_orgao: orgaoFinal,
+                orgao: orgaoFinal,
                 contato_orgao,
-                vendedor,
+                vendedor: vendedorFinal,
+                vendedor_responsavel: vendedorFinal,
                 transportadora,
                 valor_frete,
                 data_coleta,
@@ -281,61 +348,12 @@ app.put('/api/fretes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Frete não encontrado' });
         }
 
-        console.log('✅ Frete atualizado');
+        console.log('✅ Frete atualizado (PUT)');
         res.json(data);
     } catch (error) {
         console.error('❌ Erro ao atualizar frete:', error);
         res.status(500).json({ 
             error: 'Erro ao atualizar frete',
-            details: error.message 
-        });
-    }
-});
-
-// PATCH - Atualizar status (checkbox de entrega)
-app.patch('/api/fretes/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const requestBody = req.body;
-        
-        console.log('🔄 Atualizando status do frete:', id);
-        console.log('📦 Body recebido:', requestBody);
-
-        const updateData = {};
-        
-        if (requestBody.status !== undefined) {
-            updateData.status = requestBody.status;
-        }
-        
-        if (requestBody.entregue !== undefined) {
-            updateData.entregue = requestBody.entregue;
-        }
-
-        if (Object.keys(updateData).length === 0) {
-            return res.status(400).json({ 
-                error: 'Nenhum campo para atualizar' 
-            });
-        }
-
-        const { data, error } = await supabase
-            .from('controle_frete')
-            .update(updateData)
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        if (!data) {
-            return res.status(404).json({ error: 'Frete não encontrado' });
-        }
-
-        console.log('✅ Status atualizado com sucesso');
-        res.json(data);
-    } catch (error) {
-        console.error('❌ Erro ao atualizar status:', error);
-        res.status(500).json({ 
-            error: 'Erro ao atualizar status',
             details: error.message 
         });
     }
@@ -370,7 +388,7 @@ app.get('/', (req, res) => {
     res.json({ 
         status: 'online',
         service: 'Controle de Frete API',
-        version: '2.0.0',
+        version: '2.1.0',
         timestamp: new Date().toISOString()
     });
 });
@@ -395,7 +413,7 @@ app.use((error, req, res, next) => {
 // INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 ================================');
-    console.log(`🚀 Controle de Frete API v2.0.0`);
+    console.log(`🚀 Controle de Frete API v2.1.0`);
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`🔗 Supabase URL: ${supabaseUrl}`);
     console.log(`📁 Public folder: ${publicPath}`);
