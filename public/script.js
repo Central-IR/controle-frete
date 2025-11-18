@@ -1,27 +1,23 @@
 // ============================================
 // CONFIGURAÇÃO
 // ============================================
-const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
 const API_URL = 'https://controle-frete.onrender.com/api';
 
 let fretes = [];
 let isOnline = false;
 let lastDataHash = '';
-let sessionToken = null;
-let currentTab = 0;
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-const tabs = ['tab-nota', 'tab-orgao', 'tab-transporte'];
 
 const meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-console.log('Controle de Frete iniciada');
+console.log('Controle de Frete iniciado');
 
 document.addEventListener('DOMContentLoaded', () => {
-    verificarAutenticacao();
+    inicializarApp();
 });
 
 // ============================================
@@ -55,38 +51,8 @@ window.nextMonth = function() {
 };
 
 // ============================================
-// AUTENTICAÇÃO
+// INICIALIZAÇÃO
 // ============================================
-function verificarAutenticacao() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('sessionToken');
-
-    if (tokenFromUrl) {
-        sessionToken = tokenFromUrl;
-        sessionStorage.setItem('controleFreteSession', tokenFromUrl);
-        window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-        sessionToken = sessionStorage.getItem('controleFreteSession');
-    }
-
-    if (!sessionToken) {
-        mostrarTelaAcessoNegado();
-        return;
-    }
-
-    inicializarApp();
-}
-
-function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
-    document.body.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg-primary); color: var(--text-primary); text-align: center; padding: 2rem;">
-            <h1 style="font-size: 2.2rem; margin-bottom: 1rem;">${mensagem}</h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Somente usuários autenticados podem acessar esta área.</p>
-            <a href="${PORTAL_URL}" style="display: inline-block; background: var(--btn-register); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">Ir para o Portal</a>
-        </div>
-    `;
-}
-
 function inicializarApp() {
     updateMonthDisplay();
     checkServerStatus();
@@ -101,24 +67,15 @@ async function checkServerStatus() {
     try {
         const response = await fetch(`${API_URL}/fretes`, {
             method: 'GET',
-            headers: { 
-                'X-Session-Token': sessionToken,
-                'Accept': 'application/json'
-            },
+            headers: { 'Accept': 'application/json' },
             mode: 'cors'
         });
-
-        if (response.status === 401) {
-            sessionStorage.removeItem('controleFreteSession');
-            mostrarTelaAcessoNegado('Sua sessão expirou');
-            return false;
-        }
 
         const wasOffline = !isOnline;
         isOnline = response.ok;
         
         if (wasOffline && isOnline) {
-            console.log('Servidor ONLINE');
+            console.log('✅ Servidor ONLINE');
             await loadFretes();
         }
         
@@ -147,20 +104,14 @@ async function loadFretes() {
     try {
         const response = await fetch(`${API_URL}/fretes`, {
             method: 'GET',
-            headers: { 
-                'X-Session-Token': sessionToken,
-                'Accept': 'application/json'
-            },
+            headers: { 'Accept': 'application/json' },
             mode: 'cors'
         });
 
-        if (response.status === 401) {
-            sessionStorage.removeItem('controleFreteSession');
-            mostrarTelaAcessoNegado('Sua sessão expirou');
+        if (!response.ok) {
+            console.error('❌ Erro ao carregar fretes:', response.status);
             return;
         }
-
-        if (!response.ok) return;
 
         const data = await response.json();
         fretes = data;
@@ -168,13 +119,13 @@ async function loadFretes() {
         const newHash = JSON.stringify(fretes.map(f => f.id));
         if (newHash !== lastDataHash) {
             lastDataHash = newHash;
-            console.log(`${fretes.length} fretes carregados`);
+            console.log(`✅ ${fretes.length} fretes carregados`);
             updateAllFilters();
             updateDashboard();
             filterFretes();
         }
     } catch (error) {
-        console.error('Erro ao carregar:', error);
+        console.error('❌ Erro ao carregar:', error);
     }
 }
 
@@ -186,7 +137,7 @@ function startPolling() {
 }
 
 // ============================================
-// DASHBOARD ATUALIZADO
+// DASHBOARD
 // ============================================
 function updateDashboard() {
     const hoje = new Date();
@@ -195,47 +146,36 @@ function updateDashboard() {
     // Status monitorados
     const statusMonitorados = ['EM_TRANSITO', 'ENTREGUE'];
     
-    // Filtrar apenas fretes monitorados do mês selecionado
-    const fretesMonitoradosDoMes = fretes.filter(f => {
+    // Filtrar fretes do mês selecionado
+    const fretesDoMes = fretes.filter(f => {
         const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
-        const mesCorreto = dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
-        return mesCorreto && statusMonitorados.includes(f.status);
+        return dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
     });
     
-    // Entregas Realizadas (do mês selecionado - monitorados)
-    const entregues = fretesMonitoradosDoMes.filter(f => f.status === 'ENTREGUE').length;
+    const fretesMonitorados = fretesDoMes.filter(f => statusMonitorados.includes(f.status));
     
-    // Fora do Prazo (monitorados, não entregues, previsão vencida)
-    const foraPrazo = fretesMonitoradosDoMes.filter(f => {
+    // Estatísticas
+    const entregues = fretesMonitorados.filter(f => f.status === 'ENTREGUE').length;
+    const transito = fretesMonitorados.filter(f => f.status === 'EM_TRANSITO').length;
+    
+    const foraPrazo = fretesMonitorados.filter(f => {
         if (f.status === 'ENTREGUE') return false;
         const previsao = new Date(f.previsao_entrega + 'T00:00:00');
         previsao.setHours(0, 0, 0, 0);
         return previsao < hoje;
     }).length;
     
-    // Em Trânsito (monitorados ativos)
-    const transito = fretesMonitoradosDoMes.filter(f => f.status === 'EM_TRANSITO').length;
+    const valorTotal = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
+    const freteTotal = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
     
-    // Todos os fretes do mês (incluindo não monitorados)
-    const todosFretesDoMes = fretes.filter(f => {
-        const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
-        return dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
-    });
-    
-    // Valor Total (todos do mês)
-    const valorTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
-    
-    // Frete Total (todos do mês)
-    const freteTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
-    
-    // Atualizar valores
+    // Atualizar interface
     document.getElementById('statEntregues').textContent = entregues;
     document.getElementById('statForaPrazo').textContent = foraPrazo;
     document.getElementById('statTransito').textContent = transito;
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('statFrete').textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
-    // ALERTA VISUAL SUTIL - Fora do Prazo
+    // Alerta visual
     const cardForaPrazo = document.getElementById('cardForaPrazo');
     const pulseBadge = document.getElementById('pulseBadge');
     
@@ -426,7 +366,6 @@ function showFormModal(editingId = null) {
     
     // MAIÚSCULAS automáticas
     const camposMaiusculas = ['numero_nf', 'documento', 'nome_orgao', 'contato_orgao', 'cidade_destino'];
-
     camposMaiusculas.forEach(campoId => {
         const campo = document.getElementById(campoId);
         if (campo) {
@@ -449,9 +388,6 @@ function closeFormModal() {
     }
 }
 
-// ============================================
-// SISTEMA DE ABAS
-// ============================================
 window.switchFormTab = function(index) {
     const tabButtons = document.querySelectorAll('#formModal .tab-btn');
     const tabContents = document.querySelectorAll('#formModal .tab-content');
@@ -465,98 +401,44 @@ window.switchFormTab = function(index) {
     });
 };
 
-function switchTab(index) {
-    currentTab = index;
-    
-    document.querySelectorAll('#formModal .tab-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-    });
-    
-    document.querySelectorAll('#formModal .tab-content').forEach((content, i) => {
-        content.classList.toggle('active', i === index);
-    });
-    
-    updateNavigationButtons();
-}
-
 // ============================================
-// SUBMIT CORRIGIDO - CONTROLE DE FRETE
+// SUBMIT
 // ============================================
-
 async function handleSubmit(event) {
     if (event) event.preventDefault();
 
-    // Coletar dados do formulário
     const formData = {
         numero_nf: document.getElementById('numero_nf').value.trim(),
         data_emissao: document.getElementById('data_emissao').value,
         documento: document.getElementById('documento').value.trim(),
         valor_nf: parseFloat(document.getElementById('valor_nf').value),
-        
-        // CAMPOS DO ÓRGÃO
         nome_orgao: document.getElementById('nome_orgao').value.trim(),
-        orgao: document.getElementById('nome_orgao').value.trim(), // ✅ ADICIONAR ESTE CAMPO para compatibilidade
-        contato_orgao: document.getElementById('contato_orgao').value.trim(),
+        contato_orgao: document.getElementById('contato_orgao').value.trim() || null,
         vendedor: document.getElementById('vendedor').value.trim(),
-        vendedor_responsavel: document.getElementById('vendedor').value.trim(), // ✅ ADICIONAR ESTE CAMPO para compatibilidade
-        
-        // CAMPOS DO TRANSPORTE
         transportadora: document.getElementById('transportadora').value.trim(),
         valor_frete: parseFloat(document.getElementById('valor_frete').value),
         data_coleta: document.getElementById('data_coleta').value || null,
         cidade_destino: document.getElementById('cidade_destino').value.trim(),
-        previsao_entrega: document.getElementById('previsao_entrega').value,
-        
-        // STATUS (deixar o servidor calcular ou definir padrão)
-        status: 'EM_TRANSITO', // ✅ Garantir que sempre tenha um status
-        entregue: false // ✅ Adicionar campo para sincronização
+        previsao_entrega: document.getElementById('previsao_entrega').value
     };
-
-    // Remover campos vazios/null (exceto números e booleanos)
-    Object.keys(formData).forEach(key => {
-        if (formData[key] === '' || formData[key] === null) {
-            if (typeof formData[key] !== 'number' && typeof formData[key] !== 'boolean') {
-                delete formData[key];
-            }
-        }
-    });
 
     const editId = document.getElementById('editId').value;
 
-    // Se está editando, preservar timestamp
-    if (editId) {
-        const freteExistente = fretes.find(f => String(f.id) === String(editId));
-        if (freteExistente) {
-            formData.timestamp = freteExistente.timestamp;
-            formData.status = freteExistente.status; // Preservar status ao editar
-            formData.entregue = freteExistente.entregue || false;
-        }
-    }
-
-    // Verificar conexão
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
         closeFormModal();
         return;
     }
 
-    // Validações adicionais
-    if (!formData.numero_nf || !formData.data_emissao || !formData.documento) {
-        showMessage('Preencha todos os campos obrigatórios da Nota!', 'error');
+    // Validações
+    if (!formData.numero_nf || !formData.data_emissao || !formData.documento || 
+        !formData.nome_orgao || !formData.vendedor || !formData.transportadora || 
+        !formData.cidade_destino || !formData.previsao_entrega) {
+        showMessage('Preencha todos os campos obrigatórios!', 'error');
         return;
     }
 
-    if (!formData.nome_orgao || !formData.vendedor) {
-        showMessage('Preencha todos os campos obrigatórios do Órgão!', 'error');
-        return;
-    }
-
-    if (!formData.transportadora || !formData.cidade_destino || !formData.previsao_entrega) {
-        showMessage('Preencha todos os campos obrigatórios do Transporte!', 'error');
-        return;
-    }
-
-    console.log('📤 Enviando dados:', formData); // ✅ LOG para debug
+    console.log('📤 Enviando:', formData);
 
     try {
         const url = editId ? `${API_URL}/fretes/${editId}` : `${API_URL}/fretes`;
@@ -566,30 +448,20 @@ async function handleSubmit(event) {
             method,
             headers: {
                 'Content-Type': 'application/json',
-                'X-Session-Token': sessionToken,
                 'Accept': 'application/json'
             },
             body: JSON.stringify(formData),
             mode: 'cors'
         });
 
-        // Log da resposta para debug
-        console.log('📥 Status da resposta:', response.status);
-
-        if (response.status === 401) {
-            sessionStorage.removeItem('controleFreteSession');
-            mostrarTelaAcessoNegado('Sua sessão expirou');
-            return;
-        }
-
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('❌ Erro do servidor:', errorData);
+            console.error('❌ Erro:', errorData);
             throw new Error(errorData.error || errorData.details || 'Erro ao salvar');
         }
 
         const savedData = await response.json();
-        console.log('✅ Dados salvos:', savedData);
+        console.log('✅ Salvo:', savedData);
 
         if (editId) {
             const index = fretes.findIndex(f => String(f.id) === String(editId));
@@ -604,7 +476,6 @@ async function handleSubmit(event) {
         updateAllFilters();
         updateDashboard();
         filterFretes();
-        
         closeFormModal();
 
     } catch (error) {
@@ -614,46 +485,35 @@ async function handleSubmit(event) {
 }
 
 // ============================================
-// TOGGLE ENTREGUE (CHECKBOX) - CORRIGIDO
+// TOGGLE ENTREGUE
 // ============================================
-
 window.toggleEntregue = async function(id) {
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
     if (!frete) return;
 
-    // Determinar novo status e campo entregue
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
-    const novoEntregue = novoStatus === 'ENTREGUE'; // ✅ ADICIONAR ESTE CAMPO!
+    const novoEntregue = (novoStatus === 'ENTREGUE');
 
-    console.log('🔄 Atualizando frete:', {
-        id: idStr,
-        status_atual: frete.status,
-        novo_status: novoStatus,
-        entregue: novoEntregue
-    });
+    console.log('🔄 Toggle:', { id: idStr, de: frete.status, para: novoStatus });
 
     // Atualizar localmente
     frete.status = novoStatus;
-    frete.entregue = novoEntregue; // ✅ ATUALIZAR CAMPO ENTREGUE
+    frete.entregue = novoEntregue;
     updateDashboard();
     filterFretes();
 
-    // Atualizar no servidor
+    // Atualizar servidor
     if (isOnline) {
         try {
             const response = await fetch(`${API_URL}/fretes/${idStr}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Session-Token': sessionToken,
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    status: novoStatus,
-                    entregue: novoEntregue // ✅ ENVIAR CAMPO ENTREGUE
-                }),
+                body: JSON.stringify({ status: novoStatus, entregue: novoEntregue }),
                 mode: 'cors'
             });
 
@@ -663,16 +523,15 @@ window.toggleEntregue = async function(id) {
             const index = fretes.findIndex(f => String(f.id) === idStr);
             if (index !== -1) fretes[index] = savedData;
 
-            console.log('✅ Frete atualizado no servidor:', savedData);
+            console.log('✅ Atualizado no servidor');
             
-            // Mensagem de sucesso
             if (novoEntregue) {
-                showMessage('Frete marcado como ENTREGUE! Aguarde 30s para aparecer no Contas a Receber.', 'success');
+                showMessage('Frete marcado como ENTREGUE!', 'success');
             }
 
         } catch (error) {
-            console.error('❌ Erro ao atualizar status:', error);
-            // Reverter mudança
+            console.error('❌ Erro:', error);
+            // Reverter
             frete.status = novoStatus === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
             frete.entregue = !novoEntregue;
             updateDashboard();
@@ -725,10 +584,7 @@ window.deleteFrete = async function(id) {
         try {
             const response = await fetch(`${API_URL}/fretes/${idStr}`, {
                 method: 'DELETE',
-                headers: {
-                    'X-Session-Token': sessionToken,
-                    'Accept': 'application/json'
-                },
+                headers: { 'Accept': 'application/json' },
                 mode: 'cors'
             });
 
@@ -832,7 +688,7 @@ window.switchViewTab = function(index) {
 };
 
 // ============================================
-// FILTROS - ATUALIZAÇÃO DINÂMICA
+// FILTROS
 // ============================================
 function updateAllFilters() {
     updateTransportadorasFilter();
@@ -892,12 +748,10 @@ function updateStatusFilter() {
     let temForaDoPrazo = false;
     
     fretes.forEach(f => {
-        // Adicionar status existente
         if (f.status?.trim()) {
             statusSet.add(f.status.trim());
         }
         
-        // Verificar se tem algum fora do prazo
         if (f.status !== 'ENTREGUE') {
             const previsao = new Date(f.previsao_entrega + 'T00:00:00');
             previsao.setHours(0, 0, 0, 0);
@@ -912,7 +766,6 @@ function updateStatusFilter() {
         const currentValue = select.value;
         select.innerHTML = '<option value="">Todos</option>';
         
-        // Adicionar "Fora do Prazo" SOMENTE se existir
         if (temForaDoPrazo) {
             const optionForaPrazo = document.createElement('option');
             optionForaPrazo.value = 'FORA_DO_PRAZO';
@@ -939,9 +792,6 @@ function updateStatusFilter() {
     }
 }
 
-// ============================================
-// FILTROS E RENDERIZAÇÃO
-// ============================================
 function filterFretes() {
     const searchTerm = document.getElementById('search')?.value.toLowerCase() || '';
     const filterTransportadora = document.getElementById('filterTransportadora')?.value || '';
