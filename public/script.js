@@ -583,10 +583,12 @@ window.toggleEntregue = async function(id) {
         para: novoStatus
     });
 
+    // Atualizar localmente
     frete.status = novoStatus;
     updateDashboard();
     filterFretes();
 
+    // Atualizar no servidor
     if (isOnline) {
         try {
             const response = await fetch(`${API_URL}/fretes/${idStr}`, {
@@ -616,6 +618,7 @@ window.toggleEntregue = async function(id) {
 
         } catch (error) {
             console.error('❌ Erro:', error);
+            // Reverter mudança
             frete.status = novoStatus === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
             updateDashboard();
             filterFretes();
