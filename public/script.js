@@ -479,84 +479,41 @@ function switchTab(index) {
     updateNavigationButtons();
 }
 
-// ============================================
-// SUBMIT CORRIGIDO - CONTROLE DE FRETE
-// ============================================
-
 async function handleSubmit(event) {
     if (event) event.preventDefault();
 
-    // Coletar dados do formulário
     const formData = {
         numero_nf: document.getElementById('numero_nf').value.trim(),
         data_emissao: document.getElementById('data_emissao').value,
         documento: document.getElementById('documento').value.trim(),
         valor_nf: parseFloat(document.getElementById('valor_nf').value),
-        
-        // CAMPOS DO ÓRGÃO
         nome_orgao: document.getElementById('nome_orgao').value.trim(),
-        orgao: document.getElementById('nome_orgao').value.trim(), // ✅ ADICIONAR ESTE CAMPO para compatibilidade
-        contato_orgao: document.getElementById('contato_orgao').value.trim(),
+        contato_orgao: document.getElementById('contato_orgao').value.trim() || '',
         vendedor: document.getElementById('vendedor').value.trim(),
-        vendedor_responsavel: document.getElementById('vendedor').value.trim(), // ✅ ADICIONAR ESTE CAMPO para compatibilidade
-        
-        // CAMPOS DO TRANSPORTE
         transportadora: document.getElementById('transportadora').value.trim(),
         valor_frete: parseFloat(document.getElementById('valor_frete').value),
-        data_coleta: document.getElementById('data_coleta').value || null,
+        data_coleta: document.getElementById('data_coleta').value || '',
         cidade_destino: document.getElementById('cidade_destino').value.trim(),
         previsao_entrega: document.getElementById('previsao_entrega').value,
-        
-        // STATUS (deixar o servidor calcular ou definir padrão)
-        status: 'EM_TRANSITO', // ✅ Garantir que sempre tenha um status
-        entregue: false // ✅ Adicionar campo para sincronização
+        status: 'EM_TRANSITO'
     };
-
-    // Remover campos vazios/null (exceto números e booleanos)
-    Object.keys(formData).forEach(key => {
-        if (formData[key] === '' || formData[key] === null) {
-            if (typeof formData[key] !== 'number' && typeof formData[key] !== 'boolean') {
-                delete formData[key];
-            }
-        }
-    });
 
     const editId = document.getElementById('editId').value;
 
-    // Se está editando, preservar timestamp
     if (editId) {
         const freteExistente = fretes.find(f => String(f.id) === String(editId));
-        if (freteExistente) {
+        if (freteExistente && freteExistente.timestamp) {
             formData.timestamp = freteExistente.timestamp;
-            formData.status = freteExistente.status; // Preservar status ao editar
-            formData.entregue = freteExistente.entregue || false;
         }
     }
 
-    // Verificar conexão
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
         closeFormModal();
         return;
     }
 
-    // Validações adicionais
-    if (!formData.numero_nf || !formData.data_emissao || !formData.documento) {
-        showMessage('Preencha todos os campos obrigatórios da Nota!', 'error');
-        return;
-    }
-
-    if (!formData.nome_orgao || !formData.vendedor) {
-        showMessage('Preencha todos os campos obrigatórios do Órgão!', 'error');
-        return;
-    }
-
-    if (!formData.transportadora || !formData.cidade_destino || !formData.previsao_entrega) {
-        showMessage('Preencha todos os campos obrigatórios do Transporte!', 'error');
-        return;
-    }
-
-    console.log('📤 Enviando dados:', formData); // ✅ LOG para debug
+    console.log('📤 Enviando:', formData);
 
     try {
         const url = editId ? `${API_URL}/fretes/${editId}` : `${API_URL}/fretes`;
@@ -573,9 +530,6 @@ async function handleSubmit(event) {
             mode: 'cors'
         });
 
-        // Log da resposta para debug
-        console.log('📥 Status da resposta:', response.status);
-
         if (response.status === 401) {
             sessionStorage.removeItem('controleFreteSession');
             mostrarTelaAcessoNegado('Sua sessão expirou');
@@ -583,13 +537,13 @@ async function handleSubmit(event) {
         }
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('❌ Erro do servidor:', errorData);
-            throw new Error(errorData.error || errorData.details || 'Erro ao salvar');
+            const errorText = await response.text();
+            console.error('❌ Erro do servidor:', errorText);
+            throw new Error('Erro ao salvar');
         }
 
         const savedData = await response.json();
-        console.log('✅ Dados salvos:', savedData);
+        console.log('✅ Salvo:', savedData);
 
         if (editId) {
             const index = fretes.findIndex(f => String(f.id) === String(editId));
@@ -604,7 +558,6 @@ async function handleSubmit(event) {
         updateAllFilters();
         updateDashboard();
         filterFretes();
-        
         closeFormModal();
 
     } catch (error) {
@@ -613,34 +566,27 @@ async function handleSubmit(event) {
     }
 }
 
-// ============================================
-// TOGGLE ENTREGUE (CHECKBOX) - CORRIGIDO
-// ============================================
-
 window.toggleEntregue = async function(id) {
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
-    if (!frete) return;
+    if (!frete) {
+        console.error('❌ Frete não encontrado:', idStr);
+        return;
+    }
 
-    // Determinar novo status e campo entregue
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
-    const novoEntregue = novoStatus === 'ENTREGUE'; // ✅ ADICIONAR ESTE CAMPO!
 
-    console.log('🔄 Atualizando frete:', {
+    console.log('🔄 Mudando status:', {
         id: idStr,
-        status_atual: frete.status,
-        novo_status: novoStatus,
-        entregue: novoEntregue
+        de: frete.status,
+        para: novoStatus
     });
 
-    // Atualizar localmente
     frete.status = novoStatus;
-    frete.entregue = novoEntregue; // ✅ ATUALIZAR CAMPO ENTREGUE
     updateDashboard();
     filterFretes();
 
-    // Atualizar no servidor
     if (isOnline) {
         try {
             const response = await fetch(`${API_URL}/fretes/${idStr}`, {
@@ -650,34 +596,30 @@ window.toggleEntregue = async function(id) {
                     'X-Session-Token': sessionToken,
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ 
-                    status: novoStatus,
-                    entregue: novoEntregue // ✅ ENVIAR CAMPO ENTREGUE
-                }),
+                body: JSON.stringify({ status: novoStatus }),
                 mode: 'cors'
             });
 
-            if (!response.ok) throw new Error('Erro ao atualizar');
+            if (!response.ok) {
+                throw new Error('Erro ao atualizar');
+            }
 
             const savedData = await response.json();
             const index = fretes.findIndex(f => String(f.id) === idStr);
             if (index !== -1) fretes[index] = savedData;
 
-            console.log('✅ Frete atualizado no servidor:', savedData);
+            console.log('✅ Status atualizado');
             
-            // Mensagem de sucesso
-            if (novoEntregue) {
-                showMessage('Frete marcado como ENTREGUE! Aguarde 30s para aparecer no Contas a Receber.', 'success');
+            if (novoStatus === 'ENTREGUE') {
+                showMessage('✓ Marcado como ENTREGUE', 'success');
             }
 
         } catch (error) {
-            console.error('❌ Erro ao atualizar status:', error);
-            // Reverter mudança
+            console.error('❌ Erro:', error);
             frete.status = novoStatus === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
-            frete.entregue = !novoEntregue;
             updateDashboard();
             filterFretes();
-            showMessage('Erro ao atualizar status', 'error');
+            showMessage('Erro ao atualizar', 'error');
         }
     }
 };
@@ -1031,12 +973,12 @@ function renderFretes(fretesToRender) {
                             <td style="text-align: center; padding: 8px;">
                                 <div class="checkbox-wrapper">
                                     <input 
-                                        type="checkbox" 
-                                        id="check-${f.id}"
-                                        ${isEntregue ? 'checked' : ''}
-                                        onchange="toggleEntregue('${f.id}')"
-                                        class="styled-checkbox"
-                                    >
+    type="checkbox" 
+    id="check-${f.id}"
+    ${isEntregue ? 'checked' : ''}
+    onchange="toggleEntregue('${f.id}')"
+    class="styled-checkbox"
+>
                                     <label for="check-${f.id}" class="checkbox-label-styled"></label>
                                 </div>
                             </td>
@@ -1048,9 +990,9 @@ function renderFretes(fretesToRender) {
                             <td>${f.cidade_destino}</td>
                             <td>${getStatusBadge(f.status)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
-                                <button onclick="viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
-                                <button onclick="editFrete('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
-                                <button onclick="deleteFrete('${f.id}')" class="action-btn delete" title="Excluir">Excluir</button>
+                                <button onclick="viewFrete('${f.id}')" class="action-btn view">Ver</button>
+<button onclick="editFrete('${f.id}')" class="action-btn edit">Editar</button>
+<button onclick="deleteFrete('${f.id}')" class="action-btn delete">Excluir</button>
                             </td>
                         </tr>
                     `}).join('')}
