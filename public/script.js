@@ -415,7 +415,7 @@ function showFormModal(editingId = null) {
 
                         <div class="modal-actions">
                             <button type="submit" class="save">${editingId ? 'Atualizar' : 'Salvar'}</button>
-                            <button type="button" class="secondary" onclick="closeFormModal()">Cancelar</button>
+                            <button type="button" class="secondary" onclick="closeFormModal(true)">Cancelar</button>
                         </div>
                     </form>
                 </div>
@@ -442,9 +442,16 @@ function showFormModal(editingId = null) {
     setTimeout(() => document.getElementById('numero_nf')?.focus(), 100);
 }
 
-function closeFormModal() {
+function closeFormModal(showCancelMessage = false) {
     const modal = document.getElementById('formModal');
     if (modal) {
+        const editId = document.getElementById('editId')?.value;
+        const isEditing = editId && editId !== '';
+        
+        if (showCancelMessage) {
+            showMessage(isEditing ? 'Atualização cancelada' : 'Registro cancelado', 'error');
+        }
+        
         modal.style.animation = 'fadeOut 0.2s ease forwards';
         setTimeout(() => modal.remove(), 200);
     }
@@ -629,6 +636,24 @@ window.editFrete = function(id) {
     
     showFormModal(idStr);
 };
+
+function getStatusBadgeForRender(frete) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    // Se não está entregue E está fora do prazo, mostrar "Fora do Prazo"
+    if (frete.status !== 'ENTREGUE') {
+        const previsao = new Date(frete.previsao_entrega + 'T00:00:00');
+        previsao.setHours(0, 0, 0, 0);
+        
+        if (previsao < hoje) {
+            return '<span class="badge devolvido">FORA DO PRAZO</span>';
+        }
+    }
+    
+    // Caso contrário, usar o status normal
+    return getStatusBadge(frete.status);
+}
 
 // ============================================
 // EXCLUSÃO
@@ -979,7 +1004,7 @@ function renderFretes(fretesToRender) {
                             <td>${f.vendedor}</td>
                             <td>${f.transportadora}</td>
                             <td>${f.cidade_destino}</td>
-                            <td>${getStatusBadge(f.status)}</td>
+                            <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
                                 <button onclick="editFrete('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
