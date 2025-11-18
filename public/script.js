@@ -116,12 +116,12 @@ async function checkServerStatus() {
 
         const wasOffline = !isOnline;
         isOnline = response.ok;
-
+        
         if (wasOffline && isOnline) {
             console.log('Servidor ONLINE');
             await loadFretes();
         }
-
+        
         updateConnectionStatus();
         return isOnline;
     } catch (error) {
@@ -164,7 +164,7 @@ async function loadFretes() {
 
         const data = await response.json();
         fretes = data;
-
+        
         const newHash = JSON.stringify(fretes.map(f => f.id));
         if (newHash !== lastDataHash) {
             lastDataHash = newHash;
@@ -191,20 +191,20 @@ function startPolling() {
 function updateDashboard() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-
+    
     // Status monitorados
     const statusMonitorados = ['EM_TRANSITO', 'ENTREGUE'];
-
+    
     // Filtrar apenas fretes monitorados do mês selecionado
     const fretesMonitoradosDoMes = fretes.filter(f => {
         const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
         const mesCorreto = dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
         return mesCorreto && statusMonitorados.includes(f.status);
     });
-
+    
     // Entregas Realizadas (do mês selecionado - monitorados)
     const entregues = fretesMonitoradosDoMes.filter(f => f.status === 'ENTREGUE').length;
-
+    
     // Fora do Prazo (monitorados, não entregues, previsão vencida)
     const foraPrazo = fretesMonitoradosDoMes.filter(f => {
         if (f.status === 'ENTREGUE') return false;
@@ -212,33 +212,33 @@ function updateDashboard() {
         previsao.setHours(0, 0, 0, 0);
         return previsao < hoje;
     }).length;
-
+    
     // Em Trânsito (monitorados ativos)
     const transito = fretesMonitoradosDoMes.filter(f => f.status === 'EM_TRANSITO').length;
-
+    
     // Todos os fretes do mês (incluindo não monitorados)
     const todosFretesDoMes = fretes.filter(f => {
         const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
         return dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
     });
-
+    
     // Valor Total (todos do mês)
     const valorTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
-
+    
     // Frete Total (todos do mês)
     const freteTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
-
+    
     // Atualizar valores
     document.getElementById('statEntregues').textContent = entregues;
     document.getElementById('statForaPrazo').textContent = foraPrazo;
     document.getElementById('statTransito').textContent = transito;
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('statFrete').textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-
+    
     // ALERTA VISUAL SUTIL - Fora do Prazo
     const cardForaPrazo = document.getElementById('cardForaPrazo');
     const pulseBadge = document.getElementById('pulseBadge');
-
+    
     if (foraPrazo > 0) {
         cardForaPrazo.classList.add('has-alert');
         pulseBadge.style.display = 'flex';
@@ -306,11 +306,11 @@ window.toggleForm = function() {
 function showFormModal(editingId = null) {
     const isEditing = editingId !== null;
     let frete = null;
-
+    
     if (isEditing) {
         const idStr = String(editingId);
         frete = fretes.find(f => String(f.id) === idStr);
-
+        
         if (!frete) {
             showMessage('Frete não encontrado!', 'error');
             return;
@@ -346,7 +346,7 @@ function showFormModal(editingId = null) {
                                 </div>
                                 <div class="form-group">
                                     <label for="documento">Documento *</label>
-                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="2025NE1234" required>
+                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="CPF/CNPJ" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="valor_nf">Valor da Nota (R$) *</label>
@@ -364,7 +364,6 @@ function showFormModal(editingId = null) {
                                 <div class="form-group">
                                     <label for="contato_orgao">Contato do Órgão</label>
                                     <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}" placeholder="Telefone/E-mail">
-                                    <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}" placeholder="(27) 1234-1234">
                                 </div>
                                 <div class="form-group">
                                     <label for="vendedor">Vendedor Responsável *</label>
@@ -373,6 +372,7 @@ function showFormModal(editingId = null) {
                                         <option value="ROBERTO" ${frete?.vendedor === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
                                         <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
                                         <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
+                                        <option value="GUSTAVO" ${frete?.vendedor === 'GUSTAVO' ? 'selected' : ''}>GUSTAVO</option>
                                     </select>
                                 </div>
                             </div>
@@ -424,7 +424,7 @@ function showFormModal(editingId = null) {
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-
+    
     // MAIÚSCULAS automáticas
     const camposMaiusculas = ['numero_nf', 'documento', 'nome_orgao', 'contato_orgao', 'cidade_destino'];
 
@@ -438,7 +438,7 @@ function showFormModal(editingId = null) {
             });
         }
     });
-
+    
     setTimeout(() => document.getElementById('numero_nf')?.focus(), 100);
 }
 
@@ -456,11 +456,11 @@ function closeFormModal() {
 window.switchFormTab = function(index) {
     const tabButtons = document.querySelectorAll('#formModal .tab-btn');
     const tabContents = document.querySelectorAll('#formModal .tab-content');
-
+    
     tabButtons.forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
-
+    
     tabContents.forEach((content, i) => {
         content.classList.toggle('active', i === index);
     });
@@ -468,15 +468,15 @@ window.switchFormTab = function(index) {
 
 function switchTab(index) {
     currentTab = index;
-
+    
     document.querySelectorAll('#formModal .tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
-
+    
     document.querySelectorAll('#formModal .tab-content').forEach((content, i) => {
         content.classList.toggle('active', i === index);
     });
-
+    
     updateNavigationButtons();
 }
 
@@ -558,7 +558,7 @@ async function handleSubmit(event) {
         updateAllFilters();
         updateDashboard();
         filterFretes();
-
+        
         closeFormModal();
 
     } catch (error) {
@@ -574,7 +574,7 @@ async function handleSubmit(event) {
 window.toggleEntregue = async function(id) {
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
-
+    
     if (!frete) return;
 
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
@@ -621,12 +621,12 @@ window.toggleEntregue = async function(id) {
 window.editFrete = function(id) {
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
-
+    
     if (!frete) {
         showMessage('Frete não encontrado!', 'error');
         return;
     }
-
+    
     showFormModal(idStr);
 };
 
@@ -684,7 +684,7 @@ window.deleteFrete = async function(id) {
 window.viewFrete = function(id) {
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
-
+    
     if (!frete) {
         showMessage('Frete não encontrado!', 'error');
         return;
@@ -758,7 +758,7 @@ window.switchViewTab = function(index) {
     document.querySelectorAll('#viewModal .tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
-
+    
     document.querySelectorAll('#viewModal .tab-content').forEach((content, i) => {
         content.classList.toggle('active', i === index);
     });
@@ -820,16 +820,16 @@ function updateVendedoresFilter() {
 function updateStatusFilter() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-
+    
     const statusSet = new Set();
     let temForaDoPrazo = false;
-
+    
     fretes.forEach(f => {
         // Adicionar status existente
         if (f.status?.trim()) {
             statusSet.add(f.status.trim());
         }
-
+        
         // Verificar se tem algum fora do prazo
         if (f.status !== 'ENTREGUE') {
             const previsao = new Date(f.previsao_entrega + 'T00:00:00');
@@ -844,7 +844,7 @@ function updateStatusFilter() {
     if (select) {
         const currentValue = select.value;
         select.innerHTML = '<option value="">Todos</option>';
-
+        
         // Adicionar "Fora do Prazo" SOMENTE se existir
         if (temForaDoPrazo) {
             const optionForaPrazo = document.createElement('option');
@@ -852,7 +852,7 @@ function updateStatusFilter() {
             optionForaPrazo.textContent = 'Fora do Prazo';
             select.appendChild(optionForaPrazo);
         }
-
+        
         const statusMap = {
             'EM_TRANSITO': 'Em Trânsito',
             'ENTREGUE': 'Entregue',
@@ -861,7 +861,7 @@ function updateStatusFilter() {
             'REMESSA_AMOSTRA': 'Remessa de Amostra',
             'CANCELADO': 'Cancelada'
         };
-
+        
         Array.from(statusSet).sort().forEach(s => {
             const option = document.createElement('option');
             option.value = s;
@@ -880,7 +880,7 @@ function filterFretes() {
     const filterTransportadora = document.getElementById('filterTransportadora')?.value || '';
     const filterStatus = document.getElementById('filterStatus')?.value || '';
     const filterVendedor = document.getElementById('filterVendedor')?.value || '';
-
+    
     let filtered = [...fretes];
 
     // Filtro por mês/ano selecionado
@@ -930,9 +930,9 @@ function filterFretes() {
 // ============================================
 function renderFretes(fretesToRender) {
     const container = document.getElementById('fretesContainer');
-
+    
     if (!container) return;
-
+    
     if (!fretesToRender || fretesToRender.length === 0) {
         container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhum frete encontrado</div>';
         return;
@@ -991,7 +991,7 @@ function renderFretes(fretesToRender) {
             </table>
         </div>
     `;
-
+    
     container.innerHTML = table;
 }
 
@@ -1013,7 +1013,7 @@ function getStatusBadge(status) {
         'REMESSA_AMOSTRA': { class: 'cancelado', text: 'Remessa de Amostra' },
         'CANCELADO': { class: 'cancelado', text: 'Cancelada' }
     };
-
+    
     const s = statusMap[status] || { class: 'transito', text: status };
     return `<span class="badge ${s.class}">${s.text}</span>`;
 }
@@ -1021,13 +1021,13 @@ function getStatusBadge(status) {
 function showMessage(message, type) {
     const oldMessages = document.querySelectorAll('.floating-message');
     oldMessages.forEach(msg => msg.remove());
-
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = `floating-message ${type}`;
     messageDiv.textContent = message;
-
+    
     document.body.appendChild(messageDiv);
-
+    
     setTimeout(() => {
         messageDiv.style.animation = 'slideOut 0.3s ease forwards';
         setTimeout(() => messageDiv.remove(), 300);
