@@ -281,25 +281,26 @@ h2 {
     position: absolute;
     opacity: 0;
     cursor: pointer;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
 }
 
 .checkbox-label-styled {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 2px solid #6B7280;
-    border-radius: 6px;
+   width: 40px;
+height: 40px;
+border: 2px solid var(--border-color);
+border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-    background: transparent;
+    background: var(--input-bg);
 }
 
 .checkbox-label-styled:hover {
-    border-color: #22C55E;
+    border-color: var(--primary);
+background: var(--primary);
 }
 
 .styled-checkbox:checked + .checkbox-label-styled {
@@ -310,8 +311,8 @@ h2 {
 .styled-checkbox:checked + .checkbox-label-styled::after {
     content: '✓';
     color: white;
-    font-size: 18px;
-    font-weight: bold;
+   font-size: 1rem;
+font-weight: 700;
 }
 
 /* LINHA ENTREGUE - VERDE FRACO IGUAL COTAÇÕES */
@@ -395,24 +396,15 @@ button.secondary { background: #4B5563; }
 button.small { padding: 8px 12px; font-size: 0.85rem; }
 
 .action-btn {
-    padding: 6px 10px;
-    font-size: 0.8rem;
-    margin: 0 2px;
-    min-width: 60px;
-}
-
-@media (max-width: 1200px) {
-    .action-btn {
-        padding: 5px 8px;
-        font-size: 0.75rem;
-        min-width: 50px;
-        margin: 0 1px;
-    }
+    padding: 8px 12px;
+font-size: 0.85rem;
+margin: 0 4px;
+min-width: 70px;
 }
 
 .actions-cell { 
     white-space: nowrap;
-    min-width: auto;
+    min-width: 260px;
 }
 
 .filter-section {
