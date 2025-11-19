@@ -756,7 +756,7 @@ window.viewFrete = function(id) {
                             ${frete.data_coleta ? `<p><strong>Data Coleta:</strong> ${formatDate(frete.data_coleta)}</p>` : ''}
                             <p><strong>Destino:</strong> ${frete.cidade_destino}</p>
                             <p><strong>Previsão Entrega:</strong> ${formatDate(frete.previsao_entrega)}</p>
-                            <p><strong>Status:</strong> ${getStatusBadge(frete.status)}</p>
+                            <p><strong>Status:</strong> ${getStatusBadgeForRender(frete)}</p>
                         </div>
                     </div>
                 </div>
