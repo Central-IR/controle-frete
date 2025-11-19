@@ -704,7 +704,7 @@ window.deleteFrete = async function(id) {
 };
 
 // ============================================
-// VISUALIZAÇÃO
+// VISUALIZAÇÃO - CORRIGIDO
 // ============================================
 window.viewFrete = function(id) {
     const idStr = String(id);
@@ -729,7 +729,7 @@ window.viewFrete = function(id) {
                         <button class="tab-btn" onclick="switchViewTab(2)">Transporte</button>
                     </div>
 
-                    <div class="tab-content active" id="view-tab-nota">
+                    <div class="tab-contentactive" id="view-tab-nota">
                         <div class="info-section">
                             <h4>Dados da Nota Fiscal</h4>
                             <p><strong>Número NF:</strong> ${frete.numero_nf}</p>
@@ -967,20 +967,20 @@ function renderFretes(fretesToRender) {
         <div style="overflow-x: auto;">
             <table>
                 <thead>
-    <tr>
-        <th style="width: 40px; text-align: center;">
-            <span style="font-size: 1.1rem;">✓</span>
-        </th>
-        <th>NF</th>
-        <th>Emissão</th>
-        <th>Órgão</th>
-        <th>Vendedor</th>
-        <th>Transportadora</th>
-        <th>Valor NF</th>
-        <th>Status</th>
-        <th style="text-align: center;">Ações</th>
-    </tr>
-</thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;">
+                            <span style="font-size: 1.1rem;">✓</span>
+                        </th>
+                        <th>NF</th>
+                        <th>Emissão</th>
+                        <th>Órgão</th>
+                        <th>Vendedor</th>
+                        <th>Transportadora</th>
+                        <th>Valor NF</th>
+                        <th>Status</th>
+                        <th style="text-align: center;">Ações</th>
+                    </tr>
+                </thead>
                 <tbody>
                     ${fretesToRender.map(f => {
                         const isEntregue = f.status === 'ENTREGUE';
@@ -999,12 +999,12 @@ function renderFretes(fretesToRender) {
                                 </div>
                             </td>
                             <td><strong>${f.numero_nf}</strong></td>
-<td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
-<td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao}</td>
-<td>${f.vendedor}</td>
-<td>${f.transportadora}</td>
-<td><strong>R$ ${parseFloat(f.valor_nf).toFixed(2)}</strong></td>
-<td>${getStatusBadgeForRender(f)}</td>
+                            <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
+                            <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao}</td>
+                            <td>${f.vendedor}</td>
+                            <td>${f.transportadora}</td>
+                            <td><strong>R$ ${parseFloat(f.valor_nf).toFixed(2)}</strong></td>
+                            <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
                                 <button onclick="editFrete('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
