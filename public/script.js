@@ -729,7 +729,7 @@ window.viewFrete = function(id) {
                         <button class="tab-btn" onclick="switchViewTab(2)">Transporte</button>
                     </div>
 
-                    <div class="tab-contentactive" id="view-tab-nota">
+                    <div class="tab-content active" id="view-tab-nota">
                         <div class="info-section">
                             <h4>Dados da Nota Fiscal</h4>
                             <p><strong>Número NF:</strong> ${frete.numero_nf}</p>
