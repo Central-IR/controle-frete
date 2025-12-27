@@ -197,6 +197,12 @@ async function loadFretes() {
             updateAllFilters();
             updateDashboard();
             filterFretes();
+            
+            // VERIFICAR NOTAS EM ATRASO (apenas na primeira carga)
+            if (!sessionStorage.getItem('alertaAtrasosExibido')) {
+                setTimeout(() => verificarNotasAtrasadas(), 1000);
+                sessionStorage.setItem('alertaAtrasosExibido', 'true');
+            }
         }
     } catch (error) {
         console.error('Erro ao carregar:', error);
@@ -1084,3 +1090,146 @@ function showMessage(message, type) {
         setTimeout(() => messageDiv.remove(), 300);
     }, 3000);
 }
+
+// ============================================
+// ALERTA DE NOTAS EM ATRASO
+// ============================================
+function verificarNotasAtrasadas() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    // Buscar notas TIPO ENVIO que estão em atraso
+    const notasAtrasadas = fretes.filter(f => {
+        // Apenas tipo ENVIO
+        const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
+        if (!isTipoEnvio) return false;
+        
+        // Não entregues
+        if (f.status === 'ENTREGUE') return false;
+        
+        // Previsão vencida
+        const previsao = new Date(f.previsao_entrega + 'T00:00:00');
+        previsao.setHours(0, 0, 0, 0);
+        
+        return previsao < hoje;
+    });
+    
+    // Se não há notas atrasadas, não mostrar alerta
+    if (notasAtrasadas.length === 0) return;
+    
+    // Ordenar por data de previsão (mais atrasadas primeiro)
+    notasAtrasadas.sort((a, b) => {
+        const dataA = new Date(a.previsao_entrega);
+        const dataB = new Date(b.previsao_entrega);
+        return dataA - dataB;
+    });
+    
+    mostrarAlertaAtrasos(notasAtrasadas);
+}
+
+function mostrarAlertaAtrasos(notasAtrasadas) {
+    const hoje = new Date();
+    
+    // Calcular dias de atraso
+    const calcularDiasAtraso = (previsao) => {
+        const previsaoDate = new Date(previsao + 'T00:00:00');
+        const diff = hoje - previsaoDate;
+        return Math.floor(diff / (1000 * 60 * 60 * 24));
+    };
+    
+    // Limitar a 5 notas mais atrasadas
+    const notasMostrar = notasAtrasadas.slice(0, 5);
+    
+    const linhasTabela = notasMostrar.map(nota => {
+        const diasAtraso = calcularDiasAtraso(nota.previsao_entrega);
+        return `
+            <tr>
+                <td><strong>${nota.numero_nf}</strong></td>
+                <td>${nota.nome_orgao}</td>
+                <td>${nota.transportadora}</td>
+                <td style="white-space: nowrap;">${formatDate(nota.previsao_entrega)}</td>
+                <td style="text-align: center;">
+                    <span style="background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 4px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">
+                        ${diasAtraso} ${diasAtraso === 1 ? 'DIA' : 'DIAS'}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    const mensagemRodape = notasAtrasadas.length > 5 
+        ? `<p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem; text-align: center;">
+            + ${notasAtrasadas.length - 5} ${notasAtrasadas.length - 5 === 1 ? 'outra nota' : 'outras notas'} em atraso
+           </p>`
+        : '';
+    
+    const modalHTML = `
+        <div class="modal-overlay" id="alertaAtrasosModal" style="z-index: 999999;">
+            <div class="modal-content" style="max-width: 900px; width: 90%;">
+                <div class="modal-header" style="border-bottom: 3px solid #EF4444; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <div style="width: 48px; height: 48px; background: rgba(239, 68, 68, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.5">
+                                <path d="M12 9v4m0 4h.01M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="modal-title" style="margin: 0; color: #EF4444; font-size: 1.4rem;">
+                                ⚠️ ATENÇÃO: ${notasAtrasadas.length} ${notasAtrasadas.length === 1 ? 'NOTA EM ATRASO' : 'NOTAS EM ATRASO'}
+                            </h3>
+                            <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">
+                                ${notasAtrasadas.length === 1 ? 'Esta nota passou' : 'Estas notas passaram'} da previsão de entrega
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="overflow-x: auto; margin-bottom: 1.5rem;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border-color);">
+                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">NF</th>
+                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">ÓRGÃO</th>
+                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">TRANSPORTADORA</th>
+                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">PREVISÃO</th>
+                                <th style="padding: 12px; text-align: center; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">ATRASO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${linhasTabela}
+                        </tbody>
+                    </table>
+                </div>
+                
+                ${mensagemRodape}
+                
+                <div class="modal-actions" style="border-top: 2px solid var(--border-color); padding-top: 1.5rem; margin-top: 1.5rem;">
+                    <button type="button" class="save" onclick="fecharAlertaAtrasos()" style="min-width: 120px;">
+                        ENTENDIDO
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Animação de entrada
+    const modal = document.getElementById('alertaAtrasosModal');
+    setTimeout(() => {
+        modal.style.opacity = '1';
+    }, 10);
+}
+
+window.fecharAlertaAtrasos = function() {
+    const modal = document.getElementById('alertaAtrasosModal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease forwards';
+        setTimeout(() => modal.remove(), 200);
+    }
+};
+
+// Limpar flag ao fechar a página (para mostrar novamente na próxima sessão)
+window.addEventListener('beforeunload', () => {
+    sessionStorage.removeItem('alertaAtrasosExibido');
+});
