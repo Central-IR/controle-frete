@@ -20,6 +20,31 @@ const meses = [
 
 console.log('Controle de Frete iniciada');
 
+// ============================================
+// BADGE E LABELS DE TIPO DE NOTA
+// ============================================
+function getTipoNotaBadge(frete) {
+    const isEspecial = frete.tipo_nf && frete.tipo_nf !== 'ENVIO';
+    
+    if (isEspecial) {
+        return `<span class="badge badge-especial">${frete.tipo_nf.replace(/_/g, ' ')}</span>`;
+    }
+    
+    return `${getTipoNotaBadge(frete)}`;
+}
+
+function getTipoNfLabel(tipo) {
+    const labels = {
+        'ENVIO': 'Envio',
+        'CANCELADA': 'Cancelada',
+        'REMESSA_AMOSTRA': 'Remessa de Amostra',
+        'SIMPLES_REMESSA': 'Simples Remessa',
+        'DEVOLUCAO': 'Devolução'
+    };
+    return labels[tipo] || tipo || 'Envio';
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     verificarAutenticacao();
 });
@@ -189,53 +214,36 @@ function startPolling() {
 // DASHBOARD ATUALIZADO
 // ============================================
 function updateDashboard() {
+    const fretesMesAtual = fretes.filter(f => {
+        const data = new Date(f.data_emissao + 'T00:00:00');
+        return data.getMonth() === currentMonth && data.getFullYear() === currentYear;
+    });
+
+    // FILTRAR APENAS NOTAS DO TIPO ENVIO PARA CONTABILIZAR
+    const fretesEnvio = fretesMesAtual.filter(f => !f.tipo_nf || f.tipo_nf === 'ENVIO');
+
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    // Status monitorados
-    const statusMonitorados = ['EM_TRANSITO', 'ENTREGUE'];
+    const entregues = fretesEnvio.filter(f => f.status === 'ENTREGUE').length;
     
-    // Filtrar apenas fretes monitorados do mês selecionado
-    const fretesMonitoradosDoMes = fretes.filter(f => {
-        const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
-        const mesCorreto = dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
-        return mesCorreto && statusMonitorados.includes(f.status);
-    });
-    
-    // Entregas Realizadas (do mês selecionado - monitorados)
-    const entregues = fretesMonitoradosDoMes.filter(f => f.status === 'ENTREGUE').length;
-    
-    // Fora do Prazo (monitorados, não entregues, previsão vencida)
-    const foraPrazo = fretesMonitoradosDoMes.filter(f => {
+    const foraPrazo = fretesEnvio.filter(f => {
         if (f.status === 'ENTREGUE') return false;
         const previsao = new Date(f.previsao_entrega + 'T00:00:00');
         previsao.setHours(0, 0, 0, 0);
         return previsao < hoje;
     }).length;
     
-    // Em Trânsito (monitorados ativos)
-    const transito = fretesMonitoradosDoMes.filter(f => f.status === 'EM_TRANSITO').length;
+    const transito = fretesEnvio.filter(f => f.status === 'EM_TRANSITO').length;
+    const valorTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
+    const freteTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
     
-    // Todos os fretes do mês (incluindo não monitorados)
-    const todosFretesDoMes = fretes.filter(f => {
-        const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
-        return dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
-    });
-    
-    // Valor Total (todos do mês)
-    const valorTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
-    
-    // Frete Total (todos do mês)
-    const freteTotal = todosFretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
-    
-    // Atualizar valores
     document.getElementById('statEntregues').textContent = entregues;
     document.getElementById('statForaPrazo').textContent = foraPrazo;
     document.getElementById('statTransito').textContent = transito;
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     document.getElementById('statFrete').textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
-    // ALERTA VISUAL SUTIL - Fora do Prazo
     const cardForaPrazo = document.getElementById('cardForaPrazo');
     const pulseBadge = document.getElementById('pulseBadge');
     
@@ -351,6 +359,16 @@ function showFormModal(editingId = null) {
                                 <div class="form-group">
                                     <label for="valor_nf">Valor da Nota (R$) *</label>
                                     <input type="number" id="valor_nf" step="0.01" min="0" value="${frete?.valor_nf || ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tipo_nf">Tipo de NF *</label>
+                                    <select id="tipo_nf" required>
+                                        <option value="ENVIO" ${!frete?.tipo_nf || frete?.tipo_nf === 'ENVIO' ? 'selected' : ''}>Envio</option>
+                                        <option value="CANCELADA" ${frete?.tipo_nf === 'CANCELADA' ? 'selected' : ''}>Cancelada</option>
+                                        <option value="REMESSA_AMOSTRA" ${frete?.tipo_nf === 'REMESSA_AMOSTRA' ? 'selected' : ''}>Remessa de Amostra</option>
+                                        <option value="SIMPLES_REMESSA" ${frete?.tipo_nf === 'SIMPLES_REMESSA' ? 'selected' : ''}>Simples Remessa</option>
+                                        <option value="DEVOLUCAO" ${frete?.tipo_nf === 'DEVOLUCAO' ? 'selected' : ''}>Devolução</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -498,6 +516,7 @@ async function handleSubmit(event) {
         data_emissao: document.getElementById('data_emissao').value,
         documento: document.getElementById('documento').value.trim(),
         valor_nf: parseFloat(document.getElementById('valor_nf').value),
+        tipo_nf: document.getElementById('tipo_nf').value,
         nome_orgao: document.getElementById('nome_orgao').value.trim(),
         contato_orgao: document.getElementById('contato_orgao').value.trim(),
         vendedor: document.getElementById('vendedor').value.trim(),
