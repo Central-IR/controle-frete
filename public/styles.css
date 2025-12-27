@@ -765,12 +765,13 @@ tbody tr:hover { background: var(--table-hover); }
    BADGE PARA NOTAS ESPECIAIS (TIPO DE NOTA)
    ============================================ */
 .badge-especial {
-    background: #9333EA !important;
-    color: white !important;
+    background: rgba(107, 114, 128, 0.2) !important;
+    color: #6B7280 !important;
+    border: 1px solid rgba(107, 114, 128, 0.3) !important;
     font-weight: 600;
-    padding: 6px 12px;
+    padding: 4px 12px;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    white-space: nowrap;
 }
