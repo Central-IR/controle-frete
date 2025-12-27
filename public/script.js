@@ -30,7 +30,7 @@ function getTipoNotaBadge(frete) {
         return `<span class="badge badge-especial">${frete.tipo_nf.replace(/_/g, ' ')}</span>`;
     }
     
-    return `${getTipoNotaBadge(frete)}`;
+    return getStatusBadge(frete.status);
 }
 
 function getTipoNfLabel(tipo) {
@@ -657,6 +657,13 @@ window.editFrete = function(id) {
 };
 
 function getStatusBadgeForRender(frete) {
+    // Se for tipo especial (não ENVIO), mostrar badge cinza do tipo
+    const isEspecial = frete.tipo_nf && frete.tipo_nf !== 'ENVIO';
+    if (isEspecial) {
+        return getTipoNotaBadge(frete);
+    }
+    
+    // Para tipo ENVIO, verificar se está fora do prazo
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
