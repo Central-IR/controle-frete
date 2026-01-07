@@ -629,17 +629,17 @@ async function handleSubmit(event) {
 
     const formData = {
         numero_nf: document.getElementById('numero_nf').value.trim(),
-        data_emissao: document.getElementById('data_emissao').value || null,
-        documento: document.getElementById('documento').value.trim() || null,
+        data_emissao: document.getElementById('data_emissao').value || new Date().toISOString().split('T')[0],
+        documento: document.getElementById('documento').value.trim() || 'NÃO INFORMADO',
         valor_nf: document.getElementById('valor_nf').value ? parseFloat(document.getElementById('valor_nf').value) : 0,
         tipo_nf: document.getElementById('tipo_nf').value || 'ENVIO',
         nome_orgao: document.getElementById('nome_orgao').value.trim(),
-        contato_orgao: document.getElementById('contato_orgao').value.trim() || null,
-        vendedor: document.getElementById('vendedor').value.trim() || null,
-        transportadora: document.getElementById('transportadora').value.trim() || null,
+        contato_orgao: document.getElementById('contato_orgao').value.trim() || 'NÃO INFORMADO',
+        vendedor: document.getElementById('vendedor').value.trim() || 'NÃO INFORMADO',
+        transportadora: document.getElementById('transportadora').value.trim() || 'NÃO INFORMADO',
         valor_frete: document.getElementById('valor_frete').value ? parseFloat(document.getElementById('valor_frete').value) : 0,
         data_coleta: document.getElementById('data_coleta').value,
-        cidade_destino: document.getElementById('cidade_destino').value.trim() || null,
+        cidade_destino: document.getElementById('cidade_destino').value.trim() || 'NÃO INFORMADO',
         previsao_entrega: document.getElementById('previsao_entrega').value,
         observacoes: observacoesValue
     };
@@ -894,6 +894,12 @@ window.viewFrete = function(id) {
         `).join('')
         : '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 1rem;">Nenhuma observação registrada</p>';
 
+    // Função auxiliar para exibir valores
+    const displayValue = (val) => {
+        if (!val || val === 'NÃO INFORMADO') return '-';
+        return val;
+    };
+
     const modalHTML = `
         <div class="modal-overlay" id="viewModal">
             <div class="modal-content">
@@ -915,7 +921,7 @@ window.viewFrete = function(id) {
                             <h4>Dados da Nota Fiscal</h4>
                             <p><strong>Número NF:</strong> ${frete.numero_nf || '-'}</p>
                             <p><strong>Data Emissão:</strong> ${frete.data_emissao ? formatDate(frete.data_emissao) : '-'}</p>
-                            <p><strong>Documento:</strong> ${frete.documento || '-'}</p>
+                            <p><strong>Documento:</strong> ${displayValue(frete.documento)}</p>
                             <p><strong>Valor NF:</strong> R$ ${frete.valor_nf ? parseFloat(frete.valor_nf).toFixed(2) : '0,00'}</p>
                             <p><strong>Tipo NF:</strong> ${getTipoNfLabel(frete.tipo_nf)}</p>
                         </div>
@@ -925,18 +931,18 @@ window.viewFrete = function(id) {
                         <div class="info-section">
                             <h4>Dados do Órgão</h4>
                             <p><strong>Nome do Órgão:</strong> ${frete.nome_orgao || '-'}</p>
-                            ${frete.contato_orgao ? `<p><strong>Contato:</strong> ${frete.contato_orgao}</p>` : ''}
-                            <p><strong>Vendedor Responsável:</strong> ${frete.vendedor || '-'}</p>
+                            <p><strong>Contato:</strong> ${displayValue(frete.contato_orgao)}</p>
+                            <p><strong>Vendedor Responsável:</strong> ${displayValue(frete.vendedor)}</p>
                         </div>
                     </div>
 
                     <div class="tab-content" id="view-tab-transporte">
                         <div class="info-section">
                             <h4>Dados do Transporte</h4>
-                            <p><strong>Transportadora:</strong> ${frete.transportadora || '-'}</p>
+                            <p><strong>Transportadora:</strong> ${displayValue(frete.transportadora)}</p>
                             <p><strong>Valor do Frete:</strong> R$ ${frete.valor_frete ? parseFloat(frete.valor_frete).toFixed(2) : '0,00'}</p>
-                            ${frete.data_coleta ? `<p><strong>Data Coleta:</strong> ${formatDate(frete.data_coleta)}</p>` : '<p><strong>Data Coleta:</strong> -</p>'}
-                            <p><strong>Destino:</strong> ${frete.cidade_destino || '-'}</p>
+                            <p><strong>Data Coleta:</strong> ${frete.data_coleta ? formatDate(frete.data_coleta) : '-'}</p>
+                            <p><strong>Destino:</strong> ${displayValue(frete.cidade_destino)}</p>
                             <p><strong>Previsão Entrega:</strong> ${frete.previsao_entrega ? formatDate(frete.previsao_entrega) : '-'}</p>
                             <p><strong>Status:</strong> ${getStatusBadgeForRender(frete)}</p>
                         </div>
@@ -1200,6 +1206,12 @@ function renderFretes(fretesToRender) {
                         // Mostrar checkbox apenas se for tipo ENVIO (permite toggle entre EM_TRANSITO e ENTREGUE)
                         const showCheckbox = isTipoEnvio;
                         
+                        // Função para exibir valor ou "-" se for "NÃO INFORMADO"
+                        const displayValue = (val) => {
+                            if (!val || val === 'NÃO INFORMADO') return '-';
+                            return val;
+                        };
+                        
                         return `
                         <tr class="${isEntregue ? 'row-entregue' : ''}">
                             <td style="text-align: center; padding: 8px;">
@@ -1219,8 +1231,8 @@ function renderFretes(fretesToRender) {
                             <td><strong>${f.numero_nf || '-'}</strong></td>
                             <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
                             <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao || '-'}</td>
-                            <td>${f.vendedor || '-'}</td>
-                            <td>${f.transportadora || '-'}</td>
+                            <td>${displayValue(f.vendedor)}</td>
+                            <td>${displayValue(f.transportadora)}</td>
                             <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
                             <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
