@@ -158,11 +158,14 @@ async function loadFretes(showMessage = false) {
     }
 
     try {
-        const response = await fetch(`${API_URL}/fretes`, {
+        // Adicionar timestamp para evitar cache
+        const timestamp = new Date().getTime();
+        const response = await fetch(`${API_URL}/fretes?_t=${timestamp}`, {
             method: 'GET',
             headers: { 
                 'X-Session-Token': sessionToken,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
             },
             mode: 'cors'
         });
@@ -181,29 +184,25 @@ async function loadFretes(showMessage = false) {
         }
 
         const data = await response.json();
+        
+        // SEMPRE atualizar os dados
         fretes = data;
+        lastDataHash = JSON.stringify(fretes.map(f => f.id));
         
-        const newHash = JSON.stringify(fretes.map(f => f.id));
-        const hasChanges = newHash !== lastDataHash;
+        console.log(`[${new Date().toLocaleTimeString()}] ${fretes.length} fretes carregados`);
         
-        if (hasChanges || showMessage) {
-            lastDataHash = newHash;
-            console.log(`${fretes.length} fretes carregados`);
-            updateAllFilters();
-            updateDashboard();
-            filterFretes();
-            
-            if (showMessage) {
-                showToast('Dados sincronizados com sucesso!', 'success');
-            }
-            
-            // VERIFICAR NOTAS EM ATRASO (apenas na primeira carga)
-            if (!sessionStorage.getItem('alertaAtrasosExibido')) {
-                setTimeout(() => verificarNotasAtrasadas(), 1000);
-                sessionStorage.setItem('alertaAtrasosExibido', 'true');
-            }
-        } else if (showMessage) {
-            showToast('Nenhuma alteração encontrada', 'success');
+        updateAllFilters();
+        updateDashboard();
+        filterFretes();
+        
+        if (showMessage) {
+            showToast('Dados sincronizados com sucesso!', 'success');
+        }
+        
+        // VERIFICAR NOTAS EM ATRASO (apenas na primeira carga)
+        if (!sessionStorage.getItem('alertaAtrasosExibido')) {
+            setTimeout(() => verificarNotasAtrasadas(), 1000);
+            sessionStorage.setItem('alertaAtrasosExibido', 'true');
         }
     } catch (error) {
         console.error('Erro ao carregar:', error);
@@ -643,6 +642,8 @@ async function handleSubmit(event) {
         previsao_entrega: document.getElementById('previsao_entrega').value || null,
         observacoes: observacoesValue
     };
+    
+    console.log('[SUBMIT] Enviando tipo_nf:', formData.tipo_nf);
 
     // Calcular status baseado no tipo de NF
     if (formData.tipo_nf && formData.tipo_nf !== 'ENVIO') {
@@ -692,31 +693,33 @@ async function handleSubmit(event) {
         }
 
         const savedData = await response.json();
+        console.log('[RESPOSTA] Dados salvos pelo servidor:', savedData);
+        console.log('[RESPOSTA] tipo_nf retornado:', savedData.tipo_nf);
+        console.log('[RESPOSTA] status retornado:', savedData.status);
 
         if (editId) {
             // Buscar o frete ANTES de atualizar para comparar
             const freteAntes = fretes.find(f => String(f.id) === String(editId));
             const tipoAnterior = freteAntes ? freteAntes.tipo_nf : null;
             
-            // Atualizar o frete no array
-            const index = fretes.findIndex(f => String(f.id) === String(editId));
-            if (index !== -1) fretes[index] = savedData;
+            // FORÇAR RECARREGAMENTO COMPLETO dos dados do servidor
+            await loadFretes(false);
             
             // Verificar se mudou o tipo de NF
-            if (tipoAnterior && tipoAnterior !== savedData.tipo_nf) {
-                showToast(`Tipo de NF alterado para: ${getTipoNfLabel(savedData.tipo_nf)}`, 'success');
+            if (tipoAnterior && tipoAnterior !== formData.tipo_nf) {
+                showToast(`Tipo de NF alterado para: ${getTipoNfLabel(formData.tipo_nf)}`, 'success');
             } else {
                 showToast('Frete atualizado!', 'success');
             }
         } else {
             fretes.push(savedData);
             showToast('Frete criado!', 'success');
+            
+            lastDataHash = JSON.stringify(fretes.map(f => f.id));
+            updateAllFilters();
+            updateDashboard();
+            filterFretes();
         }
-
-        lastDataHash = JSON.stringify(fretes.map(f => f.id));
-        updateAllFilters();
-        updateDashboard();
-        filterFretes();
         
         closeFormModal();
 
