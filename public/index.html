@@ -8,25 +8,19 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Splash Screen -->
     <div class="splash-screen" id="splashScreen">
         <h1 class="splash-title">Controle de Frete</h1>
     </div>
 
-    <!-- Conteúdo Principal -->
     <div class="app-content">
         <div class="container">
-            <!-- Header -->
             <div class="header">
-                <div class="header-left">
-                    <h1>Controle de Frete</h1>
-                    <div id="connectionStatus" class="connection-status offline">
-                        <span class="status-dot"></span>
-                    </div>
+                <h1>Controle de Frete</h1>
+                <div id="connectionStatus" class="connection-status offline">
+                    <span class="status-dot"></span>
                 </div>
             </div>
 
-            <!-- Dashboard -->
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-label">Entregas Realizadas</div>
@@ -51,242 +45,54 @@
                 </div>
             </div>
 
-            <!-- Barra de Pesquisa, Filtros e Navegação -->
-            <div class="search-bar-wrapper">
-                <div class="search-bar">
-                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                    </svg>
-                    <input type="text" id="search" placeholder="Pesquisar por NF, órgão..." oninput="filterFretes()">
-                    
-                    <div class="search-bar-filters">
-                        <select id="filterStatus" onchange="filterFretes()" class="filter-select">
-                            <option value="">Todos os Status</option>
-                            <option value="FORA_DO_PRAZO">Fora do Prazo</option>
-                            <option value="EM_TRANSITO">Em Trânsito</option>
-                            <option value="ENTREGUE">Entregue</option>
-                            <option value="AGUARDANDO_COLETA">Aguardando Coleta</option>
-                            <option value="EXTRAVIADO">Extraviado</option>
-                            <option value="DEVOLVIDO">Devolvido</option>
+            <div class="card">
+                <div class="filter-section">
+                    <div class="form-group">
+                        <label for="search">Pesquisar</label>
+                        <input type="text" id="search" placeholder="NF, rastreio, transportadora..." oninput="filterFretes()">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterTransportadora">Transportadora</label>
+                        <select id="filterTransportadora" onchange="filterFretes()">
+                            <option value="">Todas</option>
                         </select>
-                        
-                        <!-- Navegação de Meses Inline -->
-                        <button onclick="previousMonth()" class="btn-icon-toolbar" title="Mês anterior">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="15 18 9 12 15 6"></polyline>
-                            </svg>
-                        </button>
-                        
-                        <span id="currentMonthDisplay" class="month-display-inline">Janeiro 2026</span>
-                        
-                        <button onclick="nextMonth()" class="btn-icon-toolbar" title="Próximo mês">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="9 18 15 12 9 6"></polyline>
-                            </svg>
-                        </button>
-                        
-                        <!-- Ícones de Ação -->
-                        <button onclick="showCalendarModal()" class="btn-icon-toolbar" title="Selecionar mês">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                <line x1="3" y1="10" x2="21" y2="10"></line>
-                            </svg>
-                        </button>
-                        
-                        <button onclick="syncData()" class="btn-icon-toolbar" title="Sincronizar">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <polyline points="23 4 23 10 17 10"></polyline>
-                                <polyline points="1 20 1 14 7 14"></polyline>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                            </svg>
-                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label for="filterStatus">Status</label>
+                        <select id="filterStatus" onchange="filterFretes()">
+                            <option value="">Todos</option>
+                            <option value="FORA_DO_PRAZO">Fora do Prazo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filterVendedor">Vendedor</label>
+                        <select id="filterVendedor" onchange="filterFretes()">
+                            <option value="">Todos</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <!-- Lista de Fretes -->
-            <div class="card table-card">
+            <div class="card">
+                <div class="month-navigation">
+                    <button onclick="previousMonth()" class="month-nav-btn">Anterior</button>
+                    <h3 id="currentMonthDisplay" class="month-display">Carregando...</h3>
+                    <button onclick="nextMonth()" class="month-nav-btn">Próximo</button>
+                </div>
+            </div>
+
+            <div class="card">
                 <div id="fretesContainer"></div>
             </div>
         </div>
     </div>
 
-    <!-- Botão Flutuante -->
     <button onclick="toggleForm()" class="floating-add-btn" title="Registrar Frete">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
     </button>
-
-    <!-- MODAL: Calendário -->
-    <div class="modal-overlay" id="calendarModal">
-        <div class="modal-content modal-calendar">
-            <div class="modal-header">
-                <h3 class="modal-title">Selecionar Mês</h3>
-                <button class="close-modal" onclick="closeModal('calendarModal')">✕</button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="calendar-year-selector">
-                    <button onclick="changeCalendarYear(-1)" class="calendar-year-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                    </button>
-                    <h4 id="calendarYear">2026</h4>
-                    <button onclick="changeCalendarYear(1)" class="calendar-year-btn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
-                </div>
-                
-                <div class="calendar-grid" id="calendarGrid"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: Formulário de Registro/Edição -->
-    <div class="modal-overlay" id="formModal">
-        <div class="modal-content modal-form">
-            <div class="modal-header">
-                <h3 class="modal-title" id="formTitle">Registrar Frete</h3>
-                <button class="close-modal" onclick="closeFormModal()">✕</button>
-            </div>
-            
-            <!-- Abas -->
-            <div class="tabs">
-                <button class="tab-button active" onclick="switchTab('dados')" id="tabDados">Dados Principais</button>
-                <button class="tab-button" onclick="switchTab('observacoes')" id="tabObservacoes">Observações</button>
-            </div>
-            
-            <!-- Conteúdo das Abas -->
-            <div class="tab-content active" id="contentDados">
-                <form id="freteForm" onsubmit="saveFrete(event)">
-                    <input type="hidden" id="freteId">
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Número NF *</label>
-                            <input type="text" id="numero_nf" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Data Emissão *</label>
-                            <input type="date" id="data_emissao" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Tipo NF *</label>
-                            <select id="tipo_nf" required>
-                                <option value="ENVIO">Envio</option>
-                                <option value="CANCELADA">Cancelada</option>
-                                <option value="REMESSA_AMOSTRA">Remessa Amostra</option>
-                                <option value="SIMPLES_REMESSA">Simples Remessa</option>
-                                <option value="DEVOLUCAO">Devolução</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Documento</label>
-                            <input type="text" id="documento" placeholder="CNPJ/CPF">
-                        </div>
-                        <div class="form-group">
-                            <label>Valor NF</label>
-                            <input type="text" id="valor_nf" placeholder="0,00">
-                        </div>
-                        <div class="form-group">
-                            <label>Valor Frete</label>
-                            <input type="text" id="valor_frete" placeholder="0,00">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Nome do Órgão *</label>
-                        <input type="text" id="nome_orgao" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Contato do Órgão</label>
-                        <input type="text" id="contato_orgao" placeholder="Telefone/Email">
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Vendedor *</label>
-                            <select id="vendedor" required>
-                                <option value="">Selecione...</option>
-                                <option value="ROBERTO">Roberto</option>
-                                <option value="MIGUEL">Miguel</option>
-                                <option value="ISAQUE">Isaque</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Transportadora *</label>
-                            <input type="text" id="transportadora" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Data Coleta</label>
-                            <input type="date" id="data_coleta">
-                        </div>
-                        <div class="form-group">
-                            <label>Previsão Entrega</label>
-                            <input type="date" id="previsao_entrega">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Cidade Destino</label>
-                        <input type="text" id="cidade_destino" placeholder="Cidade - UF">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Status *</label>
-                        <select id="status" required>
-                            <option value="AGUARDANDO_COLETA">Aguardando Coleta</option>
-                            <option value="EM_TRANSITO">Em Trânsito</option>
-                            <option value="ENTREGUE">Entregue</option>
-                            <option value="EXTRAVIADO">Extraviado</option>
-                            <option value="DEVOLVIDO">Devolvido</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            
-            <div class="tab-content" id="contentObservacoes">
-                <div class="observations-section">
-                    <div class="observations-list" id="observationsList">
-                        <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                            Nenhuma observação adicionada
-                        </p>
-                    </div>
-                    
-                    <div class="observation-add">
-                        <textarea id="newObservation" placeholder="Digite uma nova observação..." rows="3"></textarea>
-                        <button type="button" onclick="addObservation()" class="btn-add-observation">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Adicionar Observação
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-actions">
-                <button type="button" onclick="closeFormModal()" class="secondary">Cancelar</button>
-                <button type="submit" form="freteForm" class="primary" id="submitBtn">Salvar</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         setTimeout(() => {
