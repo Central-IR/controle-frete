@@ -694,12 +694,16 @@ async function handleSubmit(event) {
         const savedData = await response.json();
 
         if (editId) {
+            // Buscar o frete ANTES de atualizar para comparar
+            const freteAntes = fretes.find(f => String(f.id) === String(editId));
+            const tipoAnterior = freteAntes ? freteAntes.tipo_nf : null;
+            
+            // Atualizar o frete no array
             const index = fretes.findIndex(f => String(f.id) === String(editId));
             if (index !== -1) fretes[index] = savedData;
             
-            // Feedback específico se mudou o tipo de NF
-            const freteAntigo = fretes.find(f => String(f.id) === String(editId));
-            if (freteAntigo && freteAntigo.tipo_nf !== formData.tipo_nf) {
+            // Verificar se mudou o tipo de NF
+            if (tipoAnterior && tipoAnterior !== savedData.tipo_nf) {
                 showToast(`Tipo de NF alterado para: ${getTipoNfLabel(savedData.tipo_nf)}`, 'success');
             } else {
                 showToast('Frete atualizado!', 'success');
@@ -787,18 +791,19 @@ window.editFrete = function(id) {
 };
 
 function getStatusBadgeForRender(frete) {
-    // Se for tipo especial (não ENVIO), mostrar badge cinza do tipo
+    // Se for tipo especial (não ENVIO), mostrar badge CINZA do tipo
     const isEspecial = frete.tipo_nf && frete.tipo_nf !== 'ENVIO';
     if (isEspecial) {
-        return getTipoNotaBadge(frete);
+        const tipoLabel = getTipoNfLabel(frete.tipo_nf);
+        return `<span class="badge badge-especial">${tipoLabel.toUpperCase()}</span>`;
     }
     
     // Para tipo ENVIO, verificar se está fora do prazo
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    // Se não está entregue E está fora do prazo, mostrar "Fora do Prazo"
-    if (frete.status !== 'ENTREGUE') {
+    // Se não está entregue E está fora do prazo, mostrar "Fora do Prazo" em vermelho
+    if (frete.status !== 'ENTREGUE' && frete.previsao_entrega) {
         const previsao = new Date(frete.previsao_entrega + 'T00:00:00');
         previsao.setHours(0, 0, 0, 0);
         
@@ -807,7 +812,9 @@ function getStatusBadgeForRender(frete) {
         }
     }
     
-    // Caso contrário, usar o status normal
+    // Mostrar status com cores:
+    // - EM_TRANSITO = LARANJA
+    // - ENTREGUE = VERDE
     return getStatusBadge(frete.status);
 }
 
