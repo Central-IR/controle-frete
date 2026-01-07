@@ -1233,3 +1233,231 @@ window.fecharAlertaAtrasos = function() {
 window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertaAtrasosExibido');
 });
+// ==================== ADICIONAR ESTAS FUNÇÕES AO SEU SCRIPT.JS ====================
+
+// VARIÁVEIS GLOBAIS ADICIONAIS (adicionar no início)
+let currentObservations = [];
+let calendarYear = new Date().getFullYear();
+
+// ==================== NOTIFICAÇÃO DE ATRASOS ====================
+function checkOverdueNotification() {
+    const hasShown = localStorage.getItem('overdueNotificationShown');
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    if (hasShown === todayStr) return;
+    
+    const overdue = fretes.filter(f => {
+        if (f.status === 'ENTREGUE') return false;
+        if (!f.previsao_entrega) return false;
+        const prazo = new Date(f.previsao_entrega + 'T00:00:00');
+        return prazo < today;
+    });
+    
+    if (overdue.length > 0) {
+        showOverdueNotification(overdue.length);
+        localStorage.setItem('overdueNotificationShown', todayStr);
+    }
+}
+
+function showOverdueNotification(count) {
+    const notification = document.createElement('div');
+    notification.className = 'notification-banner';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div>
+                <strong>Atenção!</strong>
+                <span>${count} frete${count > 1 ? 's' : ''} fora do prazo de entrega.</span>
+            </div>
+        </div>
+        <button onclick="this.parentElement.remove()" class="notification-close">✕</button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutTop 0.3s ease forwards';
+        setTimeout(() => notification.remove(), 300);
+    }, 8000);
+}
+
+// ==================== SINCRONIZAÇÃO ====================
+async function syncData() {
+    if (!isOnline) {
+        showToast('Sistema offline', 'error');
+        return;
+    }
+    
+    const syncBtn = document.querySelectorAll('.btn-icon-toolbar')[1];
+    if (syncBtn) {
+        const svg = syncBtn.querySelector('svg');
+        svg.style.animation = 'spin 1s linear infinite';
+        
+        try {
+            await carregarFretes();
+            showToast('Dados sincronizados!', 'success');
+        } catch (error) {
+            console.error('Erro:', error);
+            showToast('Erro na sincronização', 'error');
+        } finally {
+            svg.style.animation = '';
+        }
+    }
+}
+
+function showStats() {
+    showToast('Estatísticas em desenvolvimento', 'info');
+}
+
+// ==================== MARCAR COMO ENTREGUE ====================
+async function marcarComoEntregue(freteId) {
+    if (!confirm('Marcar este frete como ENTREGUE?')) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/fretes/${freteId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({
+                status: 'ENTREGUE',
+                updated_at: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) throw new Error('Erro ao atualizar');
+        
+        showToast('Frete marcado como ENTREGUE!', 'success');
+        await carregarFretes();
+    } catch (error) {
+        console.error('Erro:', error);
+        showToast('Erro ao atualizar status', 'error');
+    }
+}
+
+// ==================== ABAS ====================
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+    document.getElementById(`content${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+}
+
+// ==================== OBSERVAÇÕES ====================
+function loadObservations(frete) {
+    currentObservations = frete.observacoes || [];
+    renderObservations();
+}
+
+function renderObservations() {
+    const container = document.getElementById('observationsList');
+    
+    if (currentObservations.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Nenhuma observação adicionada</p>';
+        return;
+    }
+    
+    container.innerHTML = currentObservations.map((obs, index) => `
+        <div class="observation-item">
+            <div class="observation-header">
+                <div class="observation-time">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    ${formatarDataHora(obs.timestamp)}
+                </div>
+                <button onclick="deleteObservation(${index})" class="observation-delete">Excluir</button>
+            </div>
+            <div class="observation-text">${obs.texto}</div>
+        </div>
+    `).join('');
+}
+
+function addObservation() {
+    const textarea = document.getElementById('newObservation');
+    const texto = textarea.value.trim();
+    
+    if (!texto) {
+        showToast('Digite uma observação', 'error');
+        return;
+    }
+    
+    currentObservations.push({
+        texto: texto,
+        timestamp: new Date().toISOString(),
+        usuario: 'Sistema'
+    });
+    
+    textarea.value = '';
+    renderObservations();
+    showToast('Observação adicionada!', 'success');
+}
+
+function deleteObservation(index) {
+    if (!confirm('Excluir esta observação?')) return;
+    
+    currentObservations.splice(index, 1);
+    renderObservations();
+    showToast('Observação excluída!', 'success');
+}
+
+function formatarDataHora(isoString) {
+    const date = new Date(isoString);
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// ==================== CALENDÁRIO ====================
+function showCalendarModal() {
+    const modal = document.getElementById('calendarModal');
+    const yearDisplay = document.getElementById('calendarYear');
+    
+    yearDisplay.textContent = calendarYear;
+    renderCalendarGrid();
+    
+    modal.classList.add('show');
+}
+
+function renderCalendarGrid() {
+    const grid = document.getElementById('calendarGrid');
+    const months = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    
+    grid.innerHTML = months.map((month, index) => {
+        const isSelected = index === currentMonth && calendarYear === currentYear;
+        return `
+            <div class="calendar-month ${isSelected ? 'selected' : ''}" 
+                 onclick="selectMonth(${index})">
+                ${month}
+            </div>
+        `;
+    }).join('');
+}
+
+function selectMonth(monthIndex) {
+    currentMonth = monthIndex;
+    currentYear = calendarYear;
+    closeModal('calendarModal');
+    carregarFretes();
+}
+
+function changeCalendarYear(delta) {
+    calendarYear += delta;
+    document.getElementById('calendarYear').textContent = calendarYear;
+    renderCalendarGrid();
+}
