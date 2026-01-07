@@ -8,17 +8,14 @@ let fretes = [];
 let isOnline = false;
 let lastDataHash = '';
 let sessionToken = null;
-let currentTab = 0;
-let currentMonth = new Date().getMonth();
-let currentYear = new Date().getFullYear();
-const tabs = ['tab-nota', 'tab-orgao', 'tab-transporte'];
+let currentMonth = new Date();
 
 const meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-console.log('Controle de Frete iniciada');
+console.log('Controle de Frete iniciado');
 
 // ============================================
 // BADGE E LABELS DE TIPO DE NOTA
@@ -44,7 +41,6 @@ function getTipoNfLabel(tipo) {
     return labels[tipo] || tipo || 'Envio';
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
     verificarAutenticacao();
 });
@@ -52,31 +48,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 // NAVEGAÇÃO POR MESES
 // ============================================
-function updateMonthDisplay() {
-    const display = document.getElementById('currentMonthDisplay');
+function updateDisplay() {
+    const display = document.getElementById('currentMonth');
     if (display) {
-        display.textContent = `${meses[currentMonth]} ${currentYear}`;
+        display.textContent = `${meses[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`;
     }
     updateDashboard();
     filterFretes();
 }
 
-window.previousMonth = function() {
-    currentMonth--;
-    if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-    }
-    updateMonthDisplay();
-};
-
-window.nextMonth = function() {
-    currentMonth++;
-    if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-    }
-    updateMonthDisplay();
+window.changeMonth = function(direction) {
+    currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1);
+    updateDisplay();
 };
 
 // ============================================
@@ -113,7 +96,7 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
 }
 
 function inicializarApp() {
-    updateMonthDisplay();
+    updateDisplay();
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
     startPolling();
@@ -222,7 +205,7 @@ function startPolling() {
 function updateDashboard() {
     const fretesMesAtual = fretes.filter(f => {
         const data = new Date(f.data_emissao + 'T00:00:00');
-        return data.getMonth() === currentMonth && data.getFullYear() === currentYear;
+        return data.getMonth() === currentMonth.getMonth() && data.getFullYear() === currentMonth.getFullYear();
     });
 
     // FILTRAR APENAS NOTAS DO TIPO ENVIO PARA CONTABILIZAR
@@ -311,7 +294,7 @@ function showConfirm(message, options = {}) {
 }
 
 // ============================================
-// FORMULÁRIO
+// FORMULÁRIO COM OBSERVAÇÕES
 // ============================================
 window.toggleForm = function() {
     showFormModal(null);
@@ -326,16 +309,46 @@ function showFormModal(editingId = null) {
         frete = fretes.find(f => String(f.id) === idStr);
         
         if (!frete) {
-            showMessage('Frete não encontrado!', 'error');
+            showToast('Frete não encontrado!', 'error');
             return;
         }
     }
+
+    // Processar observações
+    let observacoesArray = [];
+    if (frete && frete.observacoes) {
+        try {
+            observacoesArray = typeof frete.observacoes === 'string' 
+                ? JSON.parse(frete.observacoes) 
+                : frete.observacoes;
+        } catch (e) {
+            console.error('Erro ao parsear observações:', e);
+        }
+    }
+
+    const observacoesHTML = observacoesArray.length > 0 
+        ? observacoesArray.map((obs, idx) => `
+            <div class="observacao-item" data-index="${idx}">
+                <div class="observacao-header">
+                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                    <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <p class="observacao-texto">${obs.texto}</p>
+            </div>
+        `).join('')
+        : '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 2rem;">Nenhuma observação registrada</p>';
 
     const modalHTML = `
         <div class="modal-overlay" id="formModal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">${isEditing ? 'Editar Frete' : 'Novo Frete'}</h3>
+                    <button class="close-modal" onclick="closeFormModal(true)">✕</button>
                 </div>
                 
                 <div class="tabs-container">
@@ -343,10 +356,12 @@ function showFormModal(editingId = null) {
                         <button class="tab-btn active" onclick="switchFormTab(0)">Dados da Nota</button>
                         <button class="tab-btn" onclick="switchFormTab(1)">Órgão</button>
                         <button class="tab-btn" onclick="switchFormTab(2)">Transporte</button>
+                        <button class="tab-btn" onclick="switchFormTab(3)">Observações</button>
                     </div>
 
                     <form id="freteForm" onsubmit="handleSubmit(event)">
                         <input type="hidden" id="editId" value="${editingId || ''}">
+                        <input type="hidden" id="observacoesData" value='${JSON.stringify(observacoesArray)}'>
                         
                         <div class="tab-content active" id="tab-nota">
                             <div class="form-grid">
@@ -368,7 +383,7 @@ function showFormModal(editingId = null) {
                                 </div>
                                 <div class="form-group">
                                     <label for="tipo_nf">Tipo de NF *</label>
-                                    <select id="tipo_nf" required>
+                                    <select id="tipo_nf" required onchange="handleTipoNfChange()">
                                         <option value="ENVIO" ${!frete?.tipo_nf || frete?.tipo_nf === 'ENVIO' ? 'selected' : ''}>Envio</option>
                                         <option value="CANCELADA" ${frete?.tipo_nf === 'CANCELADA' ? 'selected' : ''}>Cancelada</option>
                                         <option value="REMESSA_AMOSTRA" ${frete?.tipo_nf === 'REMESSA_AMOSTRA' ? 'selected' : ''}>Remessa de Amostra</option>
@@ -387,16 +402,14 @@ function showFormModal(editingId = null) {
                                 </div>
                                 <div class="form-group">
                                     <label for="contato_orgao">Contato do Órgão</label>
-                                    <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}" placeholder="Telefone/E-mail">
+                                    <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}">
                                 </div>
                                 <div class="form-group">
                                     <label for="vendedor">Vendedor Responsável *</label>
                                     <select id="vendedor" required>
                                         <option value="">Selecione...</option>
-                                        <option value="ROBERTO" ${frete?.vendedor === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
                                         <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
                                         <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
-                                        <option value="GUSTAVO" ${frete?.vendedor === 'GUSTAVO' ? 'selected' : ''}>GUSTAVO</option>
                                     </select>
                                 </div>
                             </div>
@@ -408,13 +421,8 @@ function showFormModal(editingId = null) {
                                     <label for="transportadora">Transportadora *</label>
                                     <select id="transportadora" required>
                                         <option value="">Selecione...</option>
-                                        <option value="TNT MERCÚRIO" ${frete?.transportadora === 'TNT MERCÚRIO' ? 'selected' : ''}>TNT MERCÚRIO</option>
-                                        <option value="JAMEF" ${frete?.transportadora === 'JAMEF' ? 'selected' : ''}>JAMEF</option>
-                                        <option value="BRASPRESS" ${frete?.transportadora === 'BRASPRESS' ? 'selected' : ''}>BRASPRESS</option>
-                                        <option value="GENEROSO" ${frete?.transportadora === 'GENEROSO' ? 'selected' : ''}>GENEROSO</option>
-                                        <option value="CONTINENTAL" ${frete?.transportadora === 'CONTINENTAL' ? 'selected' : ''}>CONTINENTAL</option>
-                                        <option value="JEOLOG" ${frete?.transportadora === 'JEOLOG' ? 'selected' : ''}>JEOLOG</option>
-                                        <option value="TG TRANSPORTES" ${frete?.transportadora === 'TG TRANSPORTES' ? 'selected' : ''}>TG TRANSPORTES</option>
+                                        <option value="JADLOG" ${frete?.transportadora === 'JADLOG' ? 'selected' : ''}>JADLOG</option>
+                                        <option value="TOTAL EXPRESS" ${frete?.transportadora === 'TOTAL EXPRESS' ? 'selected' : ''}>TOTAL EXPRESS</option>
                                         <option value="CORREIOS" ${frete?.transportadora === 'CORREIOS' ? 'selected' : ''}>CORREIOS</option>
                                     </select>
                                 </div>
@@ -433,6 +441,26 @@ function showFormModal(editingId = null) {
                                 <div class="form-group">
                                     <label for="previsao_entrega">Data de Entrega *</label>
                                     <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="tab-observacoes">
+                            <div class="observacoes-section">
+                                <div class="observacoes-list" id="observacoesList">
+                                    ${observacoesHTML}
+                                </div>
+                                
+                                <div class="nova-observacao">
+                                    <label for="novaObservacao">Nova Observação</label>
+                                    <textarea id="novaObservacao" placeholder="Digite sua observação aqui..." rows="3"></textarea>
+                                    <button type="button" class="btn-add-obs" onclick="adicionarObservacao()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                        Adicionar Observação
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -466,6 +494,73 @@ function showFormModal(editingId = null) {
     setTimeout(() => document.getElementById('numero_nf')?.focus(), 100);
 }
 
+// ============================================
+// FUNÇÕES DE OBSERVAÇÕES
+// ============================================
+window.adicionarObservacao = function() {
+    const textarea = document.getElementById('novaObservacao');
+    const texto = textarea.value.trim();
+    
+    if (!texto) {
+        showToast('Digite uma observação primeiro', 'error');
+        return;
+    }
+    
+    const observacoesDataField = document.getElementById('observacoesData');
+    let observacoes = JSON.parse(observacoesDataField.value || '[]');
+    
+    observacoes.push({
+        texto: texto,
+        timestamp: new Date().toISOString()
+    });
+    
+    observacoesDataField.value = JSON.stringify(observacoes);
+    textarea.value = '';
+    
+    atualizarListaObservacoes();
+    showToast('Observação adicionada', 'success');
+};
+
+window.removerObservacao = function(index) {
+    const observacoesDataField = document.getElementById('observacoesData');
+    let observacoes = JSON.parse(observacoesDataField.value || '[]');
+    
+    observacoes.splice(index, 1);
+    observacoesDataField.value = JSON.stringify(observacoes);
+    
+    atualizarListaObservacoes();
+    showToast('Observação removida', 'success');
+};
+
+function atualizarListaObservacoes() {
+    const observacoesDataField = document.getElementById('observacoesData');
+    const observacoes = JSON.parse(observacoesDataField.value || '[]');
+    const container = document.getElementById('observacoesList');
+    
+    if (observacoes.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 2rem;">Nenhuma observação registrada</p>';
+    } else {
+        container.innerHTML = observacoes.map((obs, idx) => `
+            <div class="observacao-item" data-index="${idx}">
+                <div class="observacao-header">
+                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                    <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <p class="observacao-texto">${obs.texto}</p>
+            </div>
+        `).join('');
+    }
+}
+
+window.handleTipoNfChange = function() {
+    // Apenas para futura expansão se necessário
+};
+
 function closeFormModal(showCancelMessage = false) {
     const modal = document.getElementById('formModal');
     if (modal) {
@@ -473,7 +568,7 @@ function closeFormModal(showCancelMessage = false) {
         const isEditing = editId && editId !== '';
         
         if (showCancelMessage) {
-            showMessage(isEditing ? 'Atualização cancelada' : 'Registro cancelado', 'error');
+            showToast(isEditing ? 'Atualização cancelada' : 'Registro cancelado', 'error');
         }
         
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -497,25 +592,14 @@ window.switchFormTab = function(index) {
     });
 };
 
-function switchTab(index) {
-    currentTab = index;
-    
-    document.querySelectorAll('#formModal .tab-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-    });
-    
-    document.querySelectorAll('#formModal .tab-content').forEach((content, i) => {
-        content.classList.toggle('active', i === index);
-    });
-    
-    updateNavigationButtons();
-}
-
 // ============================================
 // SUBMIT
 // ============================================
 async function handleSubmit(event) {
     if (event) event.preventDefault();
+
+    const observacoesField = document.getElementById('observacoesData');
+    const observacoesValue = observacoesField ? observacoesField.value : '[]';
 
     const formData = {
         numero_nf: document.getElementById('numero_nf').value.trim(),
@@ -530,8 +614,8 @@ async function handleSubmit(event) {
         valor_frete: parseFloat(document.getElementById('valor_frete').value),
         data_coleta: document.getElementById('data_coleta').value,
         cidade_destino: document.getElementById('cidade_destino').value.trim(),
-        previsao_entrega: document.getElementById('previsao_entrega').value
-        // Status será calculado automaticamente pelo servidor
+        previsao_entrega: document.getElementById('previsao_entrega').value,
+        observacoes: observacoesValue
     };
 
     const editId = document.getElementById('editId').value;
@@ -544,7 +628,7 @@ async function handleSubmit(event) {
     }
 
     if (!isOnline) {
-        showMessage('Sistema offline. Dados não foram salvos.', 'error');
+        showToast('Sistema offline. Dados não foram salvos.', 'error');
         closeFormModal();
         return;
     }
@@ -580,10 +664,10 @@ async function handleSubmit(event) {
         if (editId) {
             const index = fretes.findIndex(f => String(f.id) === String(editId));
             if (index !== -1) fretes[index] = savedData;
-            showMessage('Frete atualizado!', 'success');
+            showToast('Frete atualizado!', 'success');
         } else {
             fretes.push(savedData);
-            showMessage('Frete criado!', 'success');
+            showToast('Frete criado!', 'success');
         }
 
         lastDataHash = JSON.stringify(fretes.map(f => f.id));
@@ -595,7 +679,7 @@ async function handleSubmit(event) {
 
     } catch (error) {
         console.error('Erro:', error);
-        showMessage(`Erro: ${error.message}`, 'error');
+        showToast(`Erro: ${error.message}`, 'error');
         closeFormModal();
     }
 }
@@ -608,6 +692,12 @@ window.toggleEntregue = async function(id) {
     const frete = fretes.find(f => String(f.id) === idStr);
     
     if (!frete) return;
+    
+    // Só permite toggle se for tipo ENVIO e estiver EM_TRANSITO
+    const isTipoEnvio = !frete.tipo_nf || frete.tipo_nf === 'ENVIO';
+    if (!isTipoEnvio || frete.status !== 'EM_TRANSITO') {
+        return;
+    }
 
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
 
@@ -642,7 +732,7 @@ window.toggleEntregue = async function(id) {
             frete.status = novoStatus === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
             updateDashboard();
             filterFretes();
-            showMessage('Erro ao atualizar status', 'error');
+            showToast('Erro ao atualizar status', 'error');
         }
     }
 };
@@ -655,7 +745,7 @@ window.editFrete = function(id) {
     const frete = fretes.find(f => String(f.id) === idStr);
     
     if (!frete) {
-        showMessage('Frete não encontrado!', 'error');
+        showToast('Frete não encontrado!', 'error');
         return;
     }
     
@@ -709,7 +799,7 @@ window.deleteFrete = async function(id) {
     updateAllFilters();
     updateDashboard();
     filterFretes();
-    showMessage('Frete excluído!', 'success');
+    showToast('Frete excluído!', 'success');
 
     if (isOnline) {
         try {
@@ -729,29 +819,53 @@ window.deleteFrete = async function(id) {
                 updateAllFilters();
                 updateDashboard();
                 filterFretes();
-                showMessage('Erro ao excluir', 'error');
+                showToast('Erro ao excluir', 'error');
             }
         }
     }
 };
 
 // ============================================
-// VISUALIZAÇÃO - CORRIGIDO
+// VISUALIZAÇÃO
 // ============================================
 window.viewFrete = function(id) {
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
     if (!frete) {
-        showMessage('Frete não encontrado!', 'error');
+        showToast('Frete não encontrado!', 'error');
         return;
     }
+
+    // Processar observações
+    let observacoesArray = [];
+    if (frete.observacoes) {
+        try {
+            observacoesArray = typeof frete.observacoes === 'string' 
+                ? JSON.parse(frete.observacoes) 
+                : frete.observacoes;
+        } catch (e) {
+            console.error('Erro ao parsear observações:', e);
+        }
+    }
+
+    const observacoesHTML = observacoesArray.length > 0 
+        ? observacoesArray.map(obs => `
+            <div class="observacao-item-view">
+                <div class="observacao-header">
+                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+                <p class="observacao-texto">${obs.texto}</p>
+            </div>
+        `).join('')
+        : '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 1rem;">Nenhuma observação registrada</p>';
 
     const modalHTML = `
         <div class="modal-overlay" id="viewModal">
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">Detalhes do Frete</h3>
+                    <button class="close-modal" onclick="closeViewModal()">✕</button>
                 </div>
                 
                 <div class="tabs-container">
@@ -759,6 +873,7 @@ window.viewFrete = function(id) {
                         <button class="tab-btn active" onclick="switchViewTab(0)">Dados da Nota</button>
                         <button class="tab-btn" onclick="switchViewTab(1)">Órgão</button>
                         <button class="tab-btn" onclick="switchViewTab(2)">Transporte</button>
+                        <button class="tab-btn" onclick="switchViewTab(3)">Observações</button>
                     </div>
 
                     <div class="tab-content active" id="view-tab-nota">
@@ -768,6 +883,7 @@ window.viewFrete = function(id) {
                             <p><strong>Data Emissão:</strong> ${formatDate(frete.data_emissao)}</p>
                             <p><strong>Documento:</strong> ${frete.documento}</p>
                             <p><strong>Valor NF:</strong> R$ ${parseFloat(frete.valor_nf).toFixed(2)}</p>
+                            <p><strong>Tipo NF:</strong> ${getTipoNfLabel(frete.tipo_nf)}</p>
                         </div>
                     </div>
 
@@ -789,6 +905,15 @@ window.viewFrete = function(id) {
                             <p><strong>Destino:</strong> ${frete.cidade_destino}</p>
                             <p><strong>Previsão Entrega:</strong> ${formatDate(frete.previsao_entrega)}</p>
                             <p><strong>Status:</strong> ${getStatusBadgeForRender(frete)}</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="view-tab-observacoes">
+                        <div class="info-section">
+                            <h4>Observações</h4>
+                            <div class="observacoes-list-view">
+                                ${observacoesHTML}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -825,53 +950,7 @@ window.switchViewTab = function(index) {
 // FILTROS - ATUALIZAÇÃO DINÂMICA
 // ============================================
 function updateAllFilters() {
-    updateTransportadorasFilter();
-    updateVendedoresFilter();
     updateStatusFilter();
-}
-
-function updateTransportadorasFilter() {
-    const transportadoras = new Set();
-    fretes.forEach(f => {
-        if (f.transportadora?.trim()) {
-            transportadoras.add(f.transportadora.trim());
-        }
-    });
-
-    const select = document.getElementById('filterTransportadora');
-    if (select) {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Todas</option>';
-        Array.from(transportadoras).sort().forEach(t => {
-            const option = document.createElement('option');
-            option.value = t;
-            option.textContent = t;
-            select.appendChild(option);
-        });
-        select.value = currentValue;
-    }
-}
-
-function updateVendedoresFilter() {
-    const vendedores = new Set();
-    fretes.forEach(f => {
-        if (f.vendedor?.trim()) {
-            vendedores.add(f.vendedor.trim());
-        }
-    });
-
-    const select = document.getElementById('filterVendedor');
-    if (select) {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Todos</option>';
-        Array.from(vendedores).sort().forEach(v => {
-            const option = document.createElement('option');
-            option.value = v;
-            option.textContent = v;
-            select.appendChild(option);
-        });
-        select.value = currentValue;
-    }
 }
 
 function updateStatusFilter() {
@@ -882,13 +961,9 @@ function updateStatusFilter() {
     let temForaDoPrazo = false;
     
     fretes.forEach(f => {
-        // Adicionar status existente
-        if (f.status?.trim()) {
-            statusSet.add(f.status.trim());
-        }
-        
-        // Verificar se tem algum fora do prazo
-        if (f.status !== 'ENTREGUE') {
+        // Verificar se tem algum fora do prazo (apenas tipo ENVIO)
+        const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
+        if (isTipoEnvio && f.status !== 'ENTREGUE') {
             const previsao = new Date(f.previsao_entrega + 'T00:00:00');
             previsao.setHours(0, 0, 0, 0);
             if (previsao < hoje) {
@@ -900,7 +975,7 @@ function updateStatusFilter() {
     const select = document.getElementById('filterStatus');
     if (select) {
         const currentValue = select.value;
-        select.innerHTML = '<option value="">Todos</option>';
+        select.innerHTML = '<option value="">Todos os Status</option>';
         
         // Adicionar "Fora do Prazo" SOMENTE se existir
         if (temForaDoPrazo) {
@@ -910,21 +985,6 @@ function updateStatusFilter() {
             select.appendChild(optionForaPrazo);
         }
         
-        const statusMap = {
-            'EM_TRANSITO': 'Em Trânsito',
-            'ENTREGUE': 'Entregue',
-            'DEVOLUCAO': 'Devolução',
-            'SIMPLES_REMESSA': 'Simples Remessa',
-            'REMESSA_AMOSTRA': 'Remessa de Amostra',
-            'CANCELADO': 'Cancelada'
-        };
-        
-        Array.from(statusSet).sort().forEach(s => {
-            const option = document.createElement('option');
-            option.value = s;
-            option.textContent = statusMap[s] || s;
-            select.appendChild(option);
-        });
         select.value = currentValue;
     }
 }
@@ -934,39 +994,31 @@ function updateStatusFilter() {
 // ============================================
 function filterFretes() {
     const searchTerm = document.getElementById('search')?.value.toLowerCase() || '';
-    const filterTransportadora = document.getElementById('filterTransportadora')?.value || '';
     const filterStatus = document.getElementById('filterStatus')?.value || '';
-    const filterVendedor = document.getElementById('filterVendedor')?.value || '';
     
     let filtered = [...fretes];
 
     // Filtro por mês/ano selecionado
     filtered = filtered.filter(f => {
         const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
-        return dataEmissao.getMonth() === currentMonth && dataEmissao.getFullYear() === currentYear;
+        return dataEmissao.getMonth() === currentMonth.getMonth() && dataEmissao.getFullYear() === currentMonth.getFullYear();
     });
-
-    if (filterTransportadora) {
-        filtered = filtered.filter(f => f.transportadora === filterTransportadora);
-    }
 
     if (filterStatus) {
         if (filterStatus === 'FORA_DO_PRAZO') {
             const hoje = new Date();
             hoje.setHours(0, 0, 0, 0);
             filtered = filtered.filter(f => {
+                // Apenas tipo ENVIO
+                const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
+                if (!isTipoEnvio) return false;
+                
                 if (f.status === 'ENTREGUE') return false;
                 const previsao = new Date(f.previsao_entrega + 'T00:00:00');
                 previsao.setHours(0, 0, 0, 0);
                 return previsao < hoje;
             });
-        } else {
-            filtered = filtered.filter(f => f.status === filterStatus);
         }
-    }
-
-    if (filterVendedor) {
-        filtered = filtered.filter(f => f.vendedor === filterVendedor);
     }
 
     if (searchTerm) {
@@ -978,7 +1030,13 @@ function filterFretes() {
         );
     }
 
-    filtered.sort((a, b) => new Date(a.data_emissao) - new Date(b.data_emissao));
+    // ORDENAR POR NÚMERO DA NF (crescente)
+    filtered.sort((a, b) => {
+        const numA = parseInt(a.numero_nf) || 0;
+        const numB = parseInt(b.numero_nf) || 0;
+        return numA - numB;
+    });
+    
     renderFretes(filtered);
 }
 
@@ -1016,9 +1074,16 @@ function renderFretes(fretesToRender) {
                 <tbody>
                     ${fretesToRender.map(f => {
                         const isEntregue = f.status === 'ENTREGUE';
+                        const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
+                        const isEmTransito = f.status === 'EM_TRANSITO';
+                        
+                        // Mostrar checkbox apenas se for tipo ENVIO e EM_TRANSITO
+                        const showCheckbox = isTipoEnvio && isEmTransito;
+                        
                         return `
                         <tr class="${isEntregue ? 'row-entregue' : ''}">
                             <td style="text-align: center; padding: 8px;">
+                                ${showCheckbox ? `
                                 <div class="checkbox-wrapper">
                                     <input 
                                         type="checkbox" 
@@ -1029,6 +1094,7 @@ function renderFretes(fretesToRender) {
                                     >
                                     <label for="check-${f.id}" class="checkbox-label-styled"></label>
                                 </div>
+                                ` : ''}
                             </td>
                             <td><strong>${f.numero_nf}</strong></td>
                             <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
@@ -1075,7 +1141,7 @@ function getStatusBadge(status) {
     return `<span class="badge ${s.class}">${s.text}</span>`;
 }
 
-function showMessage(message, type) {
+function showToast(message, type) {
     const oldMessages = document.querySelectorAll('.floating-message');
     oldMessages.forEach(msg => msg.remove());
     
@@ -1086,7 +1152,7 @@ function showMessage(message, type) {
     document.body.appendChild(messageDiv);
     
     setTimeout(() => {
-        messageDiv.style.animation = 'slideOut 0.3s ease forwards';
+        messageDiv.style.animation = 'slideOutBottom 0.3s ease forwards';
         setTimeout(() => messageDiv.remove(), 300);
     }, 3000);
 }
