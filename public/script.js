@@ -233,22 +233,33 @@ function updateDashboard() {
         return data.getMonth() === currentMonth.getMonth() && data.getFullYear() === currentMonth.getFullYear();
     });
 
-    // FILTRAR APENAS NOTAS DO TIPO ENVIO PARA CONTABILIZAR
+    // FILTRAR NOTAS QUE USAM STATUS: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
+    const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+    const fretesComStatus = fretesMesAtual.filter(f => {
+        const tipo = f.tipo_nf || 'ENVIO';
+        return tiposComStatus.includes(tipo);
+    });
+    
+    // FILTRAR APENAS TIPO ENVIO PARA VALORES MONETÁRIOS
     const fretesEnvio = fretesMesAtual.filter(f => !f.tipo_nf || f.tipo_nf === 'ENVIO');
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    const entregues = fretesEnvio.filter(f => f.status === 'ENTREGUE').length;
+    // STATUS: conta ENVIO + SIMPLES_REMESSA + REMESSA_AMOSTRA
+    const entregues = fretesComStatus.filter(f => f.status === 'ENTREGUE').length;
     
-    const foraPrazo = fretesEnvio.filter(f => {
+    const foraPrazo = fretesComStatus.filter(f => {
         if (f.status === 'ENTREGUE') return false;
+        if (!f.previsao_entrega) return false;
         const previsao = new Date(f.previsao_entrega + 'T00:00:00');
         previsao.setHours(0, 0, 0, 0);
         return previsao < hoje;
     }).length;
     
-    const transito = fretesEnvio.filter(f => f.status === 'EM_TRANSITO').length;
+    const transito = fretesComStatus.filter(f => f.status === 'EM_TRANSITO').length;
+    
+    // VALORES: conta APENAS ENVIO
     const valorTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
     const freteTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
     
@@ -435,7 +446,6 @@ function showFormModal(editingId = null) {
                                         <option value="">Selecione...</option>
                                         <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
                                         <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
-                                        <option value="ROBERTO" ${frete?.vendedor === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
                                     </select>
                                 </div>
                             </div>
@@ -447,13 +457,8 @@ function showFormModal(editingId = null) {
                                     <label for="transportadora">Transportadora</label>
                                     <select id="transportadora">
                                         <option value="">Selecione...</option>
-                                        <option value="TNT MERCÚRIO" ${frete?.transportadora === 'JADLOG' ? 'selected' : ''}>TNT MERCÚRIO</option>
-                                        <option value="JAMEF" ${frete?.transportadora === '' ? 'selected' : ''}>JAMEF</option>
-                                        <option value="BRASPRESS" ${frete?.transportadora === 'BRASPRESS' ? 'selected' : ''}>BRASPRESS</option>
-                                        <option value="GENEROSO" ${frete?.transportadora === 'GENEROSO' ? 'selected' : ''}>GENEROSO</option>
-                                        <option value="CONTINENTAL" ${frete?.transportadora === 'CONTINENTAL' ? 'selected' : ''}>CONTINENTAL</option>
-                                        <option value="JEOLOG" ${frete?.transportadora === 'JEOLOG' ? 'selected' : ''}>JEOLOG</option>
-                                        <option value="TG TRANSPORTES" ${frete?.transportadora === 'TG TRANSPORTES' ? 'selected' : ''}>TG TRANSPORTES</option>
+                                        <option value="JADLOG" ${frete?.transportadora === 'JADLOG' ? 'selected' : ''}>JADLOG</option>
+                                        <option value="TOTAL EXPRESS" ${frete?.transportadora === 'TOTAL EXPRESS' ? 'selected' : ''}>TOTAL EXPRESS</option>
                                         <option value="CORREIOS" ${frete?.transportadora === 'CORREIOS' ? 'selected' : ''}>CORREIOS</option>
                                     </select>
                                 </div>
@@ -745,9 +750,11 @@ window.toggleEntregue = async function(id) {
     
     if (!frete) return;
     
-    // Só permite toggle se for tipo ENVIO e estiver EM_TRANSITO ou ENTREGUE
-    const isTipoEnvio = !frete.tipo_nf || frete.tipo_nf === 'ENVIO';
-    if (!isTipoEnvio) {
+    // Permite toggle para: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
+    const tiposPermitidos = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+    const tipoNf = frete.tipo_nf || 'ENVIO';
+    
+    if (!tiposPermitidos.includes(tipoNf)) {
         return;
     }
 
@@ -800,9 +807,16 @@ window.editFrete = function(id) {
 };
 
 function getStatusBadgeForRender(frete) {
-    // Se for tipo especial (não ENVIO), mostrar badge CINZA do tipo
-    const isEspecial = frete.tipo_nf && frete.tipo_nf !== 'ENVIO';
-    if (isEspecial) {
+    // Se for SIMPLES_REMESSA ou REMESSA_AMOSTRA, SEMPRE mostrar badge CINZA (independente do status)
+    const tiposSempreCinza = ['SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+    if (tiposSempreCinza.includes(frete.tipo_nf)) {
+        const tipoLabel = getTipoNfLabel(frete.tipo_nf);
+        return `<span class="badge badge-especial">${tipoLabel.toUpperCase()}</span>`;
+    }
+    
+    // Se for CANCELADA ou DEVOLUCAO, mostrar badge CINZA do tipo
+    const tiposEspeciais = ['CANCELADA', 'DEVOLUCAO'];
+    if (tiposEspeciais.includes(frete.tipo_nf)) {
         const tipoLabel = getTipoNfLabel(frete.tipo_nf);
         return `<span class="badge badge-especial">${tipoLabel.toUpperCase()}</span>`;
     }
@@ -821,7 +835,7 @@ function getStatusBadgeForRender(frete) {
         }
     }
     
-    // Mostrar status com cores:
+    // Mostrar status com cores (apenas para ENVIO):
     // - EM_TRANSITO = LARANJA
     // - ENTREGUE = VERDE
     return getStatusBadge(frete.status);
@@ -1217,10 +1231,11 @@ function renderFretes(fretesToRender) {
                 <tbody>
                     ${fretesToRender.map(f => {
                         const isEntregue = f.status === 'ENTREGUE';
-                        const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
                         
-                        // Mostrar checkbox apenas se for tipo ENVIO (permite toggle entre EM_TRANSITO e ENTREGUE)
-                        const showCheckbox = isTipoEnvio;
+                        // Mostrar checkbox para: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
+                        const tiposComCheckbox = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+                        const tipoNf = f.tipo_nf || 'ENVIO';
+                        const showCheckbox = tiposComCheckbox.includes(tipoNf);
                         
                         // Função para exibir valor ou "-" se for "NÃO INFORMADO"
                         const displayValue = (val) => {
@@ -1312,14 +1327,18 @@ function verificarNotasAtrasadas() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    // Buscar notas TIPO ENVIO que estão em atraso
+    // Buscar notas com status (ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA) que estão em atraso
+    const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
     const notasAtrasadas = fretes.filter(f => {
-        // Apenas tipo ENVIO
-        const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
-        if (!isTipoEnvio) return false;
+        // Apenas tipos que usam status
+        const tipo = f.tipo_nf || 'ENVIO';
+        if (!tiposComStatus.includes(tipo)) return false;
         
         // Não entregues
         if (f.status === 'ENTREGUE') return false;
+        
+        // Sem previsão não pode estar atrasado
+        if (!f.previsao_entrega) return false;
         
         // Previsão vencida
         const previsao = new Date(f.previsao_entrega + 'T00:00:00');
