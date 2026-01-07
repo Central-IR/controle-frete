@@ -149,8 +149,13 @@ function updateConnectionStatus() {
 // ============================================
 // CARREGAMENTO DE DADOS
 // ============================================
-async function loadFretes() {
-    if (!isOnline) return;
+async function loadFretes(showMessage = false) {
+    if (!isOnline) {
+        if (showMessage) {
+            showToast('Sistema offline. Não foi possível sincronizar.', 'error');
+        }
+        return;
+    }
 
     try {
         const response = await fetch(`${API_URL}/fretes`, {
@@ -168,29 +173,50 @@ async function loadFretes() {
             return;
         }
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            if (showMessage) {
+                showToast('Erro ao sincronizar dados', 'error');
+            }
+            return;
+        }
 
         const data = await response.json();
         fretes = data;
         
         const newHash = JSON.stringify(fretes.map(f => f.id));
-        if (newHash !== lastDataHash) {
+        const hasChanges = newHash !== lastDataHash;
+        
+        if (hasChanges || showMessage) {
             lastDataHash = newHash;
             console.log(`${fretes.length} fretes carregados`);
             updateAllFilters();
             updateDashboard();
             filterFretes();
             
+            if (showMessage) {
+                showToast('Dados sincronizados com sucesso!', 'success');
+            }
+            
             // VERIFICAR NOTAS EM ATRASO (apenas na primeira carga)
             if (!sessionStorage.getItem('alertaAtrasosExibido')) {
                 setTimeout(() => verificarNotasAtrasadas(), 1000);
                 sessionStorage.setItem('alertaAtrasosExibido', 'true');
             }
+        } else if (showMessage) {
+            showToast('Nenhuma alteração encontrada', 'success');
         }
     } catch (error) {
         console.error('Erro ao carregar:', error);
+        if (showMessage) {
+            showToast('Erro ao sincronizar dados', 'error');
+        }
     }
 }
+
+// Função global para sincronização manual
+window.sincronizarDados = function() {
+    loadFretes(true);
+};
 
 function startPolling() {
     loadFretes();
@@ -370,20 +396,20 @@ function showFormModal(editingId = null) {
                                     <input type="text" id="numero_nf" value="${frete?.numero_nf || ''}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="data_emissao">Data de Emissão *</label>
-                                    <input type="date" id="data_emissao" value="${frete?.data_emissao || ''}" required>
+                                    <label for="data_emissao">Data de Emissão</label>
+                                    <input type="date" id="data_emissao" value="${frete?.data_emissao || ''}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="documento">Documento *</label>
-                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="CPF/CNPJ" required>
+                                    <label for="documento">Documento</label>
+                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="CPF/CNPJ">
                                 </div>
                                 <div class="form-group">
-                                    <label for="valor_nf">Valor da Nota (R$) *</label>
-                                    <input type="number" id="valor_nf" step="0.01" min="0" value="${frete?.valor_nf || ''}" required>
+                                    <label for="valor_nf">Valor da Nota (R$)</label>
+                                    <input type="number" id="valor_nf" step="0.01" min="0" value="${frete?.valor_nf || ''}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="tipo_nf">Tipo de NF *</label>
-                                    <select id="tipo_nf" required onchange="handleTipoNfChange()">
+                                    <label for="tipo_nf">Tipo de NF</label>
+                                    <select id="tipo_nf" onchange="handleTipoNfChange()">
                                         <option value="ENVIO" ${!frete?.tipo_nf || frete?.tipo_nf === 'ENVIO' ? 'selected' : ''}>Envio</option>
                                         <option value="CANCELADA" ${frete?.tipo_nf === 'CANCELADA' ? 'selected' : ''}>Cancelada</option>
                                         <option value="REMESSA_AMOSTRA" ${frete?.tipo_nf === 'REMESSA_AMOSTRA' ? 'selected' : ''}>Remessa de Amostra</option>
@@ -405,8 +431,8 @@ function showFormModal(editingId = null) {
                                     <input type="text" id="contato_orgao" value="${frete?.contato_orgao || ''}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="vendedor">Vendedor Responsável *</label>
-                                    <select id="vendedor" required>
+                                    <label for="vendedor">Vendedor Responsável</label>
+                                    <select id="vendedor">
                                         <option value="">Selecione...</option>
                                         <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
                                         <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
@@ -418,8 +444,8 @@ function showFormModal(editingId = null) {
                         <div class="tab-content" id="tab-transporte">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="transportadora">Transportadora *</label>
-                                    <select id="transportadora" required>
+                                    <label for="transportadora">Transportadora</label>
+                                    <select id="transportadora">
                                         <option value="">Selecione...</option>
                                         <option value="JADLOG" ${frete?.transportadora === 'JADLOG' ? 'selected' : ''}>JADLOG</option>
                                         <option value="TOTAL EXPRESS" ${frete?.transportadora === 'TOTAL EXPRESS' ? 'selected' : ''}>TOTAL EXPRESS</option>
@@ -427,19 +453,19 @@ function showFormModal(editingId = null) {
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="valor_frete">Valor do Frete (R$) *</label>
-                                    <input type="number" id="valor_frete" step="0.01" min="0" value="${frete?.valor_frete || ''}" required>
+                                    <label for="valor_frete">Valor do Frete (R$)</label>
+                                    <input type="number" id="valor_frete" step="0.01" min="0" value="${frete?.valor_frete || ''}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="data_coleta">Data da Coleta</label>
-                                    <input type="date" id="data_coleta" value="${frete?.data_coleta || ''}">
+                                    <label for="data_coleta">Data da Coleta *</label>
+                                    <input type="date" id="data_coleta" value="${frete?.data_coleta || ''}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="cidade_destino">Cidade-UF (Destino) *</label>
-                                    <input type="text" id="cidade_destino" value="${frete?.cidade_destino || ''}" placeholder="Ex: São Paulo-SP" required>
+                                    <label for="cidade_destino">Cidade-UF (Destino)</label>
+                                    <input type="text" id="cidade_destino" value="${frete?.cidade_destino || ''}" placeholder="Ex: São Paulo-SP">
                                 </div>
                                 <div class="form-group">
-                                    <label for="previsao_entrega">Data de Entrega *</label>
+                                    <label for="previsao_entrega">Previsão de Entrega *</label>
                                     <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}" required>
                                 </div>
                             </div>
@@ -603,20 +629,26 @@ async function handleSubmit(event) {
 
     const formData = {
         numero_nf: document.getElementById('numero_nf').value.trim(),
-        data_emissao: document.getElementById('data_emissao').value,
-        documento: document.getElementById('documento').value.trim(),
-        valor_nf: parseFloat(document.getElementById('valor_nf').value),
-        tipo_nf: document.getElementById('tipo_nf').value,
+        data_emissao: document.getElementById('data_emissao').value || null,
+        documento: document.getElementById('documento').value.trim() || null,
+        valor_nf: document.getElementById('valor_nf').value ? parseFloat(document.getElementById('valor_nf').value) : 0,
+        tipo_nf: document.getElementById('tipo_nf').value || 'ENVIO',
         nome_orgao: document.getElementById('nome_orgao').value.trim(),
-        contato_orgao: document.getElementById('contato_orgao').value.trim(),
-        vendedor: document.getElementById('vendedor').value.trim(),
-        transportadora: document.getElementById('transportadora').value.trim(),
-        valor_frete: parseFloat(document.getElementById('valor_frete').value),
+        contato_orgao: document.getElementById('contato_orgao').value.trim() || null,
+        vendedor: document.getElementById('vendedor').value.trim() || null,
+        transportadora: document.getElementById('transportadora').value.trim() || null,
+        valor_frete: document.getElementById('valor_frete').value ? parseFloat(document.getElementById('valor_frete').value) : 0,
         data_coleta: document.getElementById('data_coleta').value,
-        cidade_destino: document.getElementById('cidade_destino').value.trim(),
+        cidade_destino: document.getElementById('cidade_destino').value.trim() || null,
         previsao_entrega: document.getElementById('previsao_entrega').value,
         observacoes: observacoesValue
     };
+
+    // Calcular status baseado no tipo de NF
+    if (formData.tipo_nf && formData.tipo_nf !== 'ENVIO') {
+        // Tipos especiais não têm status normal, servidor vai tratar
+        formData.status = null;
+    }
 
     const editId = document.getElementById('editId').value;
 
@@ -879,10 +911,10 @@ window.viewFrete = function(id) {
                     <div class="tab-content active" id="view-tab-nota">
                         <div class="info-section">
                             <h4>Dados da Nota Fiscal</h4>
-                            <p><strong>Número NF:</strong> ${frete.numero_nf}</p>
-                            <p><strong>Data Emissão:</strong> ${formatDate(frete.data_emissao)}</p>
-                            <p><strong>Documento:</strong> ${frete.documento}</p>
-                            <p><strong>Valor NF:</strong> R$ ${parseFloat(frete.valor_nf).toFixed(2)}</p>
+                            <p><strong>Número NF:</strong> ${frete.numero_nf || '-'}</p>
+                            <p><strong>Data Emissão:</strong> ${frete.data_emissao ? formatDate(frete.data_emissao) : '-'}</p>
+                            <p><strong>Documento:</strong> ${frete.documento || '-'}</p>
+                            <p><strong>Valor NF:</strong> R$ ${frete.valor_nf ? parseFloat(frete.valor_nf).toFixed(2) : '0,00'}</p>
                             <p><strong>Tipo NF:</strong> ${getTipoNfLabel(frete.tipo_nf)}</p>
                         </div>
                     </div>
@@ -890,20 +922,20 @@ window.viewFrete = function(id) {
                     <div class="tab-content" id="view-tab-orgao">
                         <div class="info-section">
                             <h4>Dados do Órgão</h4>
-                            <p><strong>Nome do Órgão:</strong> ${frete.nome_orgao}</p>
+                            <p><strong>Nome do Órgão:</strong> ${frete.nome_orgao || '-'}</p>
                             ${frete.contato_orgao ? `<p><strong>Contato:</strong> ${frete.contato_orgao}</p>` : ''}
-                            <p><strong>Vendedor Responsável:</strong> ${frete.vendedor}</p>
+                            <p><strong>Vendedor Responsável:</strong> ${frete.vendedor || '-'}</p>
                         </div>
                     </div>
 
                     <div class="tab-content" id="view-tab-transporte">
                         <div class="info-section">
                             <h4>Dados do Transporte</h4>
-                            <p><strong>Transportadora:</strong> ${frete.transportadora}</p>
-                            <p><strong>Valor do Frete:</strong> R$ ${parseFloat(frete.valor_frete).toFixed(2)}</p>
-                            ${frete.data_coleta ? `<p><strong>Data Coleta:</strong> ${formatDate(frete.data_coleta)}</p>` : ''}
-                            <p><strong>Destino:</strong> ${frete.cidade_destino}</p>
-                            <p><strong>Previsão Entrega:</strong> ${formatDate(frete.previsao_entrega)}</p>
+                            <p><strong>Transportadora:</strong> ${frete.transportadora || '-'}</p>
+                            <p><strong>Valor do Frete:</strong> R$ ${frete.valor_frete ? parseFloat(frete.valor_frete).toFixed(2) : '0,00'}</p>
+                            ${frete.data_coleta ? `<p><strong>Data Coleta:</strong> ${formatDate(frete.data_coleta)}</p>` : '<p><strong>Data Coleta:</strong> -</p>'}
+                            <p><strong>Destino:</strong> ${frete.cidade_destino || '-'}</p>
+                            <p><strong>Previsão Entrega:</strong> ${frete.previsao_entrega ? formatDate(frete.previsao_entrega) : '-'}</p>
                             <p><strong>Status:</strong> ${getStatusBadgeForRender(frete)}</p>
                         </div>
                     </div>
@@ -1096,12 +1128,12 @@ function renderFretes(fretesToRender) {
                                 </div>
                                 ` : ''}
                             </td>
-                            <td><strong>${f.numero_nf}</strong></td>
+                            <td><strong>${f.numero_nf || '-'}</strong></td>
                             <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
-                            <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao}</td>
-                            <td>${f.vendedor}</td>
-                            <td>${f.transportadora}</td>
-                            <td><strong>R$ ${parseFloat(f.valor_nf).toFixed(2)}</strong></td>
+                            <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao || '-'}</td>
+                            <td>${f.vendedor || '-'}</td>
+                            <td>${f.transportadora || '-'}</td>
+                            <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
                             <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
