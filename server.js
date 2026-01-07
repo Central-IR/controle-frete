@@ -23,7 +23,7 @@ console.log('✅ Supabase configurado:', supabaseUrl);
 // MIDDLEWARES
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token']
 }));
 
@@ -174,6 +174,7 @@ app.post('/api/fretes', async (req, res) => {
             data_emissao,
             documento,
             valor_nf,
+            tipo_nf,
             nome_orgao,
             contato_orgao,
             vendedor,
@@ -181,41 +182,45 @@ app.post('/api/fretes', async (req, res) => {
             valor_frete,
             data_coleta,
             cidade_destino,
-            previsao_entrega
+            previsao_entrega,
+            observacoes
         } = req.body;
 
-        // Validações
-        if (!numero_nf || !data_emissao || !documento || !valor_nf || !nome_orgao ||
-            !vendedor || !transportadora || !valor_frete || !cidade_destino || !previsao_entrega) {
+        // Validações mínimas
+        if (!numero_nf || !nome_orgao || !data_coleta) {
             return res.status(400).json({ 
-                error: 'Campos obrigatórios faltando'
+                error: 'Campos obrigatórios faltando: numero_nf, nome_orgao, data_coleta'
             });
         }
 
-        // Calcular status automaticamente
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        const dataPrevisao = new Date(previsao_entrega);
-        dataPrevisao.setHours(0, 0, 0, 0);
+        // Calcular status baseado no tipo_nf
+        let status = 'EM_TRANSITO'; // Default para ENVIO
         
-        const status = 'EM_TRANSITO'; // Sempre começa em trânsito
+        const tipoNf = tipo_nf || 'ENVIO';
+        
+        // Se não for ENVIO, status é null (não usa status)
+        if (tipoNf !== 'ENVIO') {
+            status = null;
+        }
 
         const { data, error } = await supabase
             .from('controle_frete')
             .insert([{
                 numero_nf,
-                data_emissao,
-                documento,
-                valor_nf,
+                data_emissao: data_emissao || new Date().toISOString().split('T')[0],
+                documento: documento || 'NÃO INFORMADO',
+                valor_nf: valor_nf || 0,
+                tipo_nf: tipoNf,
                 nome_orgao,
-                contato_orgao: contato_orgao || null,
-                vendedor,
-                transportadora,
-                valor_frete,
-                data_coleta: data_coleta || null,
-                cidade_destino,
-                previsao_entrega,
-                status
+                contato_orgao: contato_orgao || 'NÃO INFORMADO',
+                vendedor: vendedor || 'NÃO INFORMADO',
+                transportadora: transportadora || 'NÃO INFORMADO',
+                valor_frete: valor_frete || 0,
+                data_coleta,
+                cidade_destino: cidade_destino || 'NÃO INFORMADO',
+                previsao_entrega: previsao_entrega || null,
+                status,
+                observacoes: observacoes || '[]'
             }])
             .select()
             .single();
@@ -233,17 +238,19 @@ app.post('/api/fretes', async (req, res) => {
     }
 });
 
-// PUT - Atualizar frete
+// PUT - Atualizar frete (CORRIGIDO!)
 app.put('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
         console.log(`✏️ Atualizando frete: ${id}`);
+        console.log('📦 Dados recebidos:', req.body);
         
         const {
             numero_nf,
             data_emissao,
             documento,
             valor_nf,
+            tipo_nf,
             nome_orgao,
             contato_orgao,
             vendedor,
@@ -251,26 +258,44 @@ app.put('/api/fretes/:id', async (req, res) => {
             valor_frete,
             data_coleta,
             cidade_destino,
-            previsao_entrega
+            previsao_entrega,
+            observacoes
         } = req.body;
 
-        // Status mantém o atual (não recalcula no update)
+        // Calcular status baseado no tipo_nf
+        let status = 'EM_TRANSITO';
+        
+        const tipoNf = tipo_nf || 'ENVIO';
+        
+        // Se não for ENVIO, status é null
+        if (tipoNf !== 'ENVIO') {
+            status = null;
+        }
+        
+        console.log(`📝 Atualizando tipo_nf para: ${tipoNf}`);
+        console.log(`📝 Atualizando status para: ${status}`);
+
+        const updateData = {
+            numero_nf,
+            data_emissao,
+            documento,
+            valor_nf,
+            tipo_nf: tipoNf,
+            nome_orgao,
+            contato_orgao,
+            vendedor,
+            transportadora,
+            valor_frete,
+            data_coleta,
+            cidade_destino,
+            previsao_entrega,
+            status,
+            observacoes: observacoes || '[]'
+        };
+
         const { data, error } = await supabase
             .from('controle_frete')
-            .update({
-                numero_nf,
-                data_emissao,
-                documento,
-                valor_nf,
-                nome_orgao,
-                contato_orgao,
-                vendedor,
-                transportadora,
-                valor_frete,
-                data_coleta,
-                cidade_destino,
-                previsao_entrega
-            })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
@@ -281,7 +306,7 @@ app.put('/api/fretes/:id', async (req, res) => {
             return res.status(404).json({ error: 'Frete não encontrado' });
         }
 
-        console.log('✅ Frete atualizado');
+        console.log('✅ Frete atualizado:', data);
         res.json(data);
     } catch (error) {
         console.error('❌ Erro ao atualizar frete:', error);
@@ -353,7 +378,7 @@ app.get('/', (req, res) => {
     res.json({ 
         status: 'online',
         service: 'Controle de Frete API',
-        version: '2.0.0',
+        version: '2.1.0',
         timestamp: new Date().toISOString()
     });
 });
@@ -378,7 +403,7 @@ app.use((error, req, res, next) => {
 // INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 ================================');
-    console.log(`🚀 Controle de Frete API v2.0.0`);
+    console.log(`🚀 Controle de Frete API v2.1.0`);
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`🔗 Supabase URL: ${supabaseUrl}`);
     console.log(`📁 Public folder: ${publicPath}`);
