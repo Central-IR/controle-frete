@@ -36,7 +36,7 @@
                 <div class="stat-card">
                     <div class="stat-icon stat-icon-default">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path>
+                            <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
                     <div class="stat-content">
@@ -47,8 +47,9 @@
                 <div class="stat-card stat-card-warning" id="cardForaPrazo">
                     <div class="stat-icon stat-icon-warning">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M12 8v4m0 4h.01"></path>
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
                         </svg>
                     </div>
                     <div class="stat-content">
@@ -83,9 +84,10 @@
                 <div class="stat-card stat-card-info">
                     <div class="stat-icon stat-icon-info">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="8.5" cy="7" r="4"></circle>
-                            <path d="M20 8v6M23 11h-6"></path>
+                            <rect x="1" y="3" width="15" height="13"></rect>
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
                         </svg>
                     </div>
                     <div class="stat-content">
@@ -106,6 +108,22 @@
                     
                     <!-- Filters integrated in search bar -->
                     <div class="search-bar-filters">
+                        <div class="filter-dropdown-inline">
+                            <select id="filterTransportadora" onchange="filterFretes()">
+                                <option value="">Todas Transportadoras</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="filter-dropdown-inline">
+                            <select id="filterVendedor" onchange="filterFretes()">
+                                <option value="">Todos Vendedores</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
                         <div class="filter-dropdown-inline">
                             <select id="filterStatus" onchange="filterFretes()">
                                 <option value="">Todos os Status</option>
