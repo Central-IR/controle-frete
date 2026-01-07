@@ -33,19 +33,19 @@
 
             <!-- Dashboard Cards -->
             <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-icon stat-icon-default">
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon stat-icon-warning">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value stat-success" id="statEntregues">0</div>
+                        <div class="stat-value stat-value-warning" id="statEntregues">0</div>
                         <div class="stat-label">Entregas Realizadas</div>
                     </div>
                 </div>
-                <div class="stat-card stat-card-warning" id="cardForaPrazo">
-                    <div class="stat-icon stat-icon-warning">
+                <div class="stat-card stat-card-danger" id="cardForaPrazo">
+                    <div class="stat-icon stat-icon-danger">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                             <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -53,7 +53,7 @@
                         </svg>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-value stat-value-warning" id="statForaPrazo">0</div>
+                        <div class="stat-value stat-value-danger" id="statForaPrazo">0</div>
                         <div class="stat-label">Fora do Prazo</div>
                     </div>
                     <div class="pulse-badge" id="pulseBadge" style="display: none;">!</div>
