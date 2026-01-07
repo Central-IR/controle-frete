@@ -465,8 +465,8 @@ function showFormModal(editingId = null) {
                                     <input type="text" id="cidade_destino" value="${frete?.cidade_destino || ''}" placeholder="Ex: São Paulo-SP">
                                 </div>
                                 <div class="form-group">
-                                    <label for="previsao_entrega">Previsão de Entrega *</label>
-                                    <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}" required>
+                                    <label for="previsao_entrega">Previsão de Entrega</label>
+                                    <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}">
                                 </div>
                             </div>
                         </div>
@@ -640,7 +640,7 @@ async function handleSubmit(event) {
         valor_frete: document.getElementById('valor_frete').value ? parseFloat(document.getElementById('valor_frete').value) : 0,
         data_coleta: document.getElementById('data_coleta').value,
         cidade_destino: document.getElementById('cidade_destino').value.trim() || 'NÃO INFORMADO',
-        previsao_entrega: document.getElementById('previsao_entrega').value,
+        previsao_entrega: document.getElementById('previsao_entrega').value || null,
         observacoes: observacoesValue
     };
 
