@@ -696,7 +696,14 @@ async function handleSubmit(event) {
         if (editId) {
             const index = fretes.findIndex(f => String(f.id) === String(editId));
             if (index !== -1) fretes[index] = savedData;
-            showToast('Frete atualizado!', 'success');
+            
+            // Feedback específico se mudou o tipo de NF
+            const freteAntigo = fretes.find(f => String(f.id) === String(editId));
+            if (freteAntigo && freteAntigo.tipo_nf !== formData.tipo_nf) {
+                showToast(`Tipo de NF alterado para: ${getTipoNfLabel(savedData.tipo_nf)}`, 'success');
+            } else {
+                showToast('Frete atualizado!', 'success');
+            }
         } else {
             fretes.push(savedData);
             showToast('Frete criado!', 'success');
@@ -725,20 +732,15 @@ window.toggleEntregue = async function(id) {
     
     if (!frete) return;
     
-    // Só permite toggle se for tipo ENVIO e estiver EM_TRANSITO
+    // Só permite toggle se for tipo ENVIO e estiver EM_TRANSITO ou ENTREGUE
     const isTipoEnvio = !frete.tipo_nf || frete.tipo_nf === 'ENVIO';
-    if (!isTipoEnvio || frete.status !== 'EM_TRANSITO') {
+    if (!isTipoEnvio) {
         return;
     }
 
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
 
-    // Atualizar localmente
-    frete.status = novoStatus;
-    updateDashboard();
-    filterFretes();
-
-    // Atualizar no servidor
+    // Atualizar no servidor primeiro
     if (isOnline) {
         try {
             const response = await fetch(`${API_URL}/fretes/${idStr}`, {
@@ -756,14 +758,14 @@ window.toggleEntregue = async function(id) {
 
             const savedData = await response.json();
             const index = fretes.findIndex(f => String(f.id) === idStr);
-            if (index !== -1) fretes[index] = savedData;
+            if (index !== -1) {
+                fretes[index] = savedData;
+                updateDashboard();
+                filterFretes();
+            }
 
         } catch (error) {
             console.error('Erro ao atualizar status:', error);
-            // Reverter mudança
-            frete.status = novoStatus === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
-            updateDashboard();
-            filterFretes();
             showToast('Erro ao atualizar status', 'error');
         }
     }
@@ -983,6 +985,52 @@ window.switchViewTab = function(index) {
 // ============================================
 function updateAllFilters() {
     updateStatusFilter();
+    updateTransportadoraFilter();
+    updateVendedorFilter();
+}
+
+function updateTransportadoraFilter() {
+    const transportadoras = new Set();
+    fretes.forEach(f => {
+        if (f.transportadora?.trim()) {
+            transportadoras.add(f.transportadora.trim());
+        }
+    });
+
+    const select = document.getElementById('filterTransportadora');
+    if (select) {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Todas Transportadoras</option>';
+        Array.from(transportadoras).sort().forEach(t => {
+            const option = document.createElement('option');
+            option.value = t;
+            option.textContent = t;
+            select.appendChild(option);
+        });
+        select.value = currentValue;
+    }
+}
+
+function updateVendedorFilter() {
+    const vendedores = new Set();
+    fretes.forEach(f => {
+        if (f.vendedor?.trim()) {
+            vendedores.add(f.vendedor.trim());
+        }
+    });
+
+    const select = document.getElementById('filterVendedor');
+    if (select) {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Todos Vendedores</option>';
+        Array.from(vendedores).sort().forEach(v => {
+            const option = document.createElement('option');
+            option.value = v;
+            option.textContent = v;
+            select.appendChild(option);
+        });
+        select.value = currentValue;
+    }
 }
 
 function updateStatusFilter() {
@@ -993,6 +1041,11 @@ function updateStatusFilter() {
     let temForaDoPrazo = false;
     
     fretes.forEach(f => {
+        // Adicionar status existente
+        if (f.status?.trim()) {
+            statusSet.add(f.status.trim());
+        }
+        
         // Verificar se tem algum fora do prazo (apenas tipo ENVIO)
         const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
         if (isTipoEnvio && f.status !== 'ENTREGUE') {
@@ -1017,6 +1070,17 @@ function updateStatusFilter() {
             select.appendChild(optionForaPrazo);
         }
         
+        const statusMap = {
+            'EM_TRANSITO': 'Em Trânsito',
+            'ENTREGUE': 'Entregue'
+        };
+        
+        Array.from(statusSet).sort().forEach(s => {
+            const option = document.createElement('option');
+            option.value = s;
+            option.textContent = statusMap[s] || s;
+            select.appendChild(option);
+        });
         select.value = currentValue;
     }
 }
@@ -1026,7 +1090,9 @@ function updateStatusFilter() {
 // ============================================
 function filterFretes() {
     const searchTerm = document.getElementById('search')?.value.toLowerCase() || '';
+    const filterTransportadora = document.getElementById('filterTransportadora')?.value || '';
     const filterStatus = document.getElementById('filterStatus')?.value || '';
+    const filterVendedor = document.getElementById('filterVendedor')?.value || '';
     
     let filtered = [...fretes];
 
@@ -1036,6 +1102,17 @@ function filterFretes() {
         return dataEmissao.getMonth() === currentMonth.getMonth() && dataEmissao.getFullYear() === currentMonth.getFullYear();
     });
 
+    // Filtro de transportadora
+    if (filterTransportadora) {
+        filtered = filtered.filter(f => f.transportadora === filterTransportadora);
+    }
+
+    // Filtro de vendedor
+    if (filterVendedor) {
+        filtered = filtered.filter(f => f.vendedor === filterVendedor);
+    }
+
+    // Filtro de status
     if (filterStatus) {
         if (filterStatus === 'FORA_DO_PRAZO') {
             const hoje = new Date();
@@ -1050,16 +1127,28 @@ function filterFretes() {
                 previsao.setHours(0, 0, 0, 0);
                 return previsao < hoje;
             });
+        } else {
+            filtered = filtered.filter(f => f.status === filterStatus);
         }
     }
 
+    // Busca por texto (melhorada)
     if (searchTerm) {
-        filtered = filtered.filter(f => 
-            f.numero_nf?.toLowerCase().includes(searchTerm) ||
-            f.transportadora?.toLowerCase().includes(searchTerm) ||
-            f.nome_orgao?.toLowerCase().includes(searchTerm) ||
-            f.cidade_destino?.toLowerCase().includes(searchTerm)
-        );
+        filtered = filtered.filter(f => {
+            const searchFields = [
+                f.numero_nf,
+                f.transportadora,
+                f.nome_orgao,
+                f.cidade_destino,
+                f.vendedor,
+                f.documento,
+                f.contato_orgao
+            ];
+            
+            return searchFields.some(field => 
+                field && field.toString().toLowerCase().includes(searchTerm)
+            );
+        });
     }
 
     // ORDENAR POR NÚMERO DA NF (crescente)
@@ -1107,10 +1196,9 @@ function renderFretes(fretesToRender) {
                     ${fretesToRender.map(f => {
                         const isEntregue = f.status === 'ENTREGUE';
                         const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
-                        const isEmTransito = f.status === 'EM_TRANSITO';
                         
-                        // Mostrar checkbox apenas se for tipo ENVIO e EM_TRANSITO
-                        const showCheckbox = isTipoEnvio && isEmTransito;
+                        // Mostrar checkbox apenas se for tipo ENVIO (permite toggle entre EM_TRANSITO e ENTREGUE)
+                        const showCheckbox = isTipoEnvio;
                         
                         return `
                         <tr class="${isEntregue ? 'row-entregue' : ''}">
