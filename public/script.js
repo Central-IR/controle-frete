@@ -435,6 +435,7 @@ function showFormModal(editingId = null) {
                                         <option value="">Selecione...</option>
                                         <option value="ISAQUE" ${frete?.vendedor === 'ISAQUE' ? 'selected' : ''}>ISAQUE</option>
                                         <option value="MIGUEL" ${frete?.vendedor === 'MIGUEL' ? 'selected' : ''}>MIGUEL</option>
+                                        <option value="ROBERTO" ${frete?.vendedor === 'ROBERTO' ? 'selected' : ''}>ROBERTO</option>
                                     </select>
                                 </div>
                             </div>
@@ -446,8 +447,13 @@ function showFormModal(editingId = null) {
                                     <label for="transportadora">Transportadora</label>
                                     <select id="transportadora">
                                         <option value="">Selecione...</option>
-                                        <option value="JADLOG" ${frete?.transportadora === 'JADLOG' ? 'selected' : ''}>JADLOG</option>
-                                        <option value="TOTAL EXPRESS" ${frete?.transportadora === 'TOTAL EXPRESS' ? 'selected' : ''}>TOTAL EXPRESS</option>
+                                        <option value="TNT MERCÚRIO" ${frete?.transportadora === 'JADLOG' ? 'selected' : ''}>TNT MERCÚRIO</option>
+                                        <option value="JAMEF" ${frete?.transportadora === '' ? 'selected' : ''}>JAMEF</option>
+                                        <option value="BRASPRESS" ${frete?.transportadora === 'BRASPRESS' ? 'selected' : ''}>BRASPRESS</option>
+                                        <option value="GENEROSO" ${frete?.transportadora === 'GENEROSO' ? 'selected' : ''}>GENEROSO</option>
+                                        <option value="CONTINENTAL" ${frete?.transportadora === 'CONTINENTAL' ? 'selected' : ''}>CONTINENTAL</option>
+                                        <option value="JEOLOG" ${frete?.transportadora === 'JEOLOG' ? 'selected' : ''}>JEOLOG</option>
+                                        <option value="TG TRANSPORTES" ${frete?.transportadora === 'TG TRANSPORTES' ? 'selected' : ''}>TG TRANSPORTES</option>
                                         <option value="CORREIOS" ${frete?.transportadora === 'CORREIOS' ? 'selected' : ''}>CORREIOS</option>
                                     </select>
                                 </div>
