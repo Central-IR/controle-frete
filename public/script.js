@@ -411,7 +411,7 @@ function showFormModal(editingId = null) {
                                 </div>
                                 <div class="form-group">
                                     <label for="documento">Documento</label>
-                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="CPF/CNPJ">
+                                    <input type="text" id="documento" value="${frete?.documento || ''}" placeholder="2025NE0000">
                                 </div>
                                 <div class="form-group">
                                     <label for="valor_nf">Valor da Nota (R$)</label>
@@ -459,7 +459,7 @@ function showFormModal(editingId = null) {
                                     <select id="transportadora">
                                         <option value="">Selecione...</option>
                                         <option value="TNT MERCÚRIO" ${frete?.transportadora === 'TNT MERCÚRIO' ? 'selected' : ''}>TNT MERCÚRIO</option>
-                                        <option value="TBRASPRESS" ${frete?.transportadora === 'BRASPRESS' ? 'selected' : ''}>BRASPRESS</option>
+                                        <option value="BRASPRESS" ${frete?.transportadora === 'BRASPRESS' ? 'selected' : ''}>BRASPRESS</option>
                                         <option value="CORREIOS" ${frete?.transportadora === 'CORREIOS' ? 'selected' : ''}>CORREIOS</option>
                                         <option value="JAMEF" ${frete?.transportadora === 'JAMEF' ? 'selected' : ''}>JAMEF</option>
                                         <option value="GENEROSO" ${frete?.transportadora === 'GENEROSO' ? 'selected' : ''}>GENEROSO</option>
