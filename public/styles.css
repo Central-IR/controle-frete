@@ -755,18 +755,18 @@ tbody tr:hover { background: var(--table-hover); }
 
 /* ==================== SEARCH BAR - IGUAL ORDEM DE COMPRA ==================== */
 .search-bar-wrapper {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .search-bar {
     background: var(--bg-card);
+    padding: 0.75rem 1rem;
+    border-radius: 12px 12px 0 0;
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1rem 1.5rem;
+    border-bottom: none;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    box-shadow: var(--card-shadow);
+    gap: 0.75rem;
 }
 
 .search-icon {
