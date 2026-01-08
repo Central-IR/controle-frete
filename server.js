@@ -198,8 +198,11 @@ app.post('/api/fretes', async (req, res) => {
         
         const tipoNf = tipo_nf || 'ENVIO';
         
-        // Se não for ENVIO, status é null (não usa status)
-        if (tipoNf !== 'ENVIO') {
+        // Tipos que usam status: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
+        const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+        
+        // Se não for um dos tipos com status, status é null
+        if (!tiposComStatus.includes(tipoNf)) {
             status = null;
         }
 
@@ -267,8 +270,11 @@ app.put('/api/fretes/:id', async (req, res) => {
         
         const tipoNf = tipo_nf || 'ENVIO';
         
-        // Se não for ENVIO, status é null
-        if (tipoNf !== 'ENVIO') {
+        // Tipos que usam status: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
+        const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+        
+        // Se não for um dos tipos com status, status é null
+        if (!tiposComStatus.includes(tipoNf)) {
             status = null;
         }
         
