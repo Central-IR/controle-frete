@@ -1457,62 +1457,26 @@ function showAlertModal() {
             </div>
         `;
     } else {
-        // Renderizar em formato de tabela
-        const displayValue = (val) => {
-            if (!val || val === 'NÃO INFORMADO') return '-';
-            return val;
-        };
-        
+        // Renderizar em formato de tabela simplificada
         modalBody.innerHTML = `
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 40px;"></th>
                             <th>Nº NF</th>
                             <th>Data Emissão</th>
                             <th>Órgão</th>
-                            <th>Vendedor</th>
-                            <th>Transportadora</th>
-                            <th>Valor NF</th>
                             <th>Previsão</th>
-                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${foraDoPrazo.map(f => {
-                            const isEntregue = f.status === 'ENTREGUE';
-                            const tiposComCheckbox = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
-                            const tipoNf = f.tipo_nf || 'ENVIO';
-                            const showCheckbox = tiposComCheckbox.includes(tipoNf);
-                            
                             return `
-                            <tr class="${isEntregue ? 'row-entregue' : ''}">
-                                <td style="text-align: center; padding: 8px;">
-                                    ${showCheckbox ? `
-                                    <div class="checkbox-wrapper">
-                                        <input 
-                                            type="checkbox" 
-                                            id="check-alert-${f.id}"
-                                            ${isEntregue ? 'checked' : ''}
-                                            onchange="toggleEntregue('${f.id}')"
-                                            class="styled-checkbox"
-                                        >
-                                        <label for="check-alert-${f.id}" class="checkbox-label-styled"></label>
-                                    </div>
-                                    ` : ''}
-                                </td>
+                            <tr>
                                 <td><strong>${f.numero_nf || '-'}</strong></td>
                                 <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
-                                <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao || '-'}</td>
-                                <td>${displayValue(f.vendedor)}</td>
-                                <td>${displayValue(f.transportadora)}</td>
-                                <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
+                                <td>${f.nome_orgao || '-'}</td>
                                 <td style="white-space: nowrap; color: #EF4444; font-weight: 600;">${formatDate(f.previsao_entrega)}</td>
-                                <td class="actions-cell" style="text-align: center; white-space: nowrap;">
-                                    <button onclick="viewFreteFromAlert('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
-                                    <button onclick="editFreteFromAlert('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
-                                </td>
                             </tr>
                         `}).join('')}
                     </tbody>
@@ -1528,17 +1492,6 @@ function showAlertModal() {
 }
 
 window.showAlertModal = showAlertModal;
-
-// Funções auxiliares para ações dentro do modal
-window.viewFreteFromAlert = function(id) {
-    closeAlertModal();
-    viewFrete(id);
-};
-
-window.editFreteFromAlert = function(id) {
-    closeAlertModal();
-    editFrete(id);
-};
 
 function closeAlertModal() {
     const alertModal = document.getElementById('alertModal');
