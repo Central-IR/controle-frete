@@ -215,9 +215,7 @@ async function loadFretes(showMessage = false) {
         updateDashboard();
         filterFretes();
         
-        if (showMessage) {
-            showToast('Dados sincronizados com sucesso!', 'success');
-        }
+        // Não mostrar mensagem de sincronização
         
         // VERIFICAR NOTAS EM ATRASO (apenas na primeira carga)
         if (!sessionStorage.getItem('alertaAtrasosExibido')) {
@@ -610,7 +608,7 @@ window.adicionarObservacao = function() {
     textarea.value = '';
     
     atualizarListaObservacoes();
-    showToast('Observação adicionada', 'success');
+    // Não mostrar mensagem
 };
 
 window.removerObservacao = function(index) {
@@ -621,7 +619,7 @@ window.removerObservacao = function(index) {
     observacoesDataField.value = JSON.stringify(observacoes);
     
     atualizarListaObservacoes();
-    showToast('Observação removida', 'success');
+    // Não mostrar mensagem
 };
 
 function atualizarListaObservacoes() {
@@ -660,7 +658,7 @@ function closeFormModal(showCancelMessage = false) {
         const isEditing = editId && editId !== '';
         
         if (showCancelMessage) {
-            showToast(isEditing ? 'Atualização cancelada' : 'Registro cancelado', 'error');
+            showToast(isEditing ? 'Atualização Cancelada' : 'Registro Cancelado', 'error');
         }
         
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -765,22 +763,14 @@ async function handleSubmit(event) {
         console.log('[RESPOSTA] status retornado:', savedData.status);
 
         if (editId) {
-            // Buscar o frete ANTES de atualizar para comparar
-            const freteAntes = fretes.find(f => String(f.id) === String(editId));
-            const tipoAnterior = freteAntes ? freteAntes.tipo_nf : null;
-            
             // FORÇAR RECARREGAMENTO COMPLETO dos dados do servidor
             await loadFretes(false);
             
-            // Verificar se mudou o tipo de NF
-            if (tipoAnterior && tipoAnterior !== formData.tipo_nf) {
-                showToast(`NF ${formData.numero_nf || savedData.numero_nf} - Tipo alterado para: ${getTipoNfLabel(formData.tipo_nf)}`, 'success');
-            } else {
-                showToast(`NF ${formData.numero_nf || savedData.numero_nf} atualizada com sucesso`, 'success');
-            }
+            // Mensagem de atualização
+            showToast(`${formData.numero_nf || savedData.numero_nf} Atualizado`, 'success');
         } else {
             fretes.push(savedData);
-            showToast(`NF ${formData.numero_nf || savedData.numero_nf} registrada com sucesso`, 'success');
+            showToast(`${formData.numero_nf || savedData.numero_nf} Registrado`, 'success');
             
             lastDataHash = JSON.stringify(fretes.map(f => f.id));
             updateAllFilters();
@@ -837,11 +827,9 @@ window.toggleEntregue = async function(id) {
             if (index !== -1) {
                 fretes[index] = savedData;
                 
-                // Mostrar mensagem apropriada
+                // Mostrar mensagem apenas ao marcar como entregue
                 if (novoStatus === 'ENTREGUE') {
-                    showToast(`NF ${savedData.numero_nf} foi entregue`, 'success');
-                } else {
-                    showToast(`Status atualizado: ${novoStatus}`, 'success');
+                    showToast(`${savedData.numero_nf} Entregue`, 'success');
                 }
                 
                 updateDashboard();
@@ -923,11 +911,13 @@ window.deleteFrete = async function(id) {
 
     const idStr = String(id);
     const deletedFrete = fretes.find(f => String(f.id) === idStr);
+    const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
+    
     fretes = fretes.filter(f => String(f.id) !== idStr);
     updateAllFilters();
     updateDashboard();
     filterFretes();
-    showToast('Frete excluído!', 'success');
+    showToast(`${numeroNF} Excluído`, 'success');
 
     if (isOnline) {
         try {
