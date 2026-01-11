@@ -8,11 +8,13 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Splash Screen -->
     <div class="splash-screen" id="splashScreen">
-        <h1 class="splash-title">Controle de Frete</h1>
+        <div class="loader"></div>
     </div>
 
-    <div class="app-content">
+    <!-- INTERFACE PRINCIPAL -->
+    <div class="app-content" id="mainView">
         <div class="container">
             <!-- Header -->
             <div class="header">
@@ -56,7 +58,6 @@
                         <div class="stat-value stat-value-danger" id="statForaPrazo">0</div>
                         <div class="stat-label">Fora do Prazo</div>
                     </div>
-                    <div class="pulse-badge" id="pulseBadge" style="display: none;">!</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon stat-icon-default">
@@ -106,7 +107,6 @@
                     </svg>
                     <input type="text" id="search" placeholder="Pesquisar" oninput="filterFretes()">
                     
-                    <!-- Filters integrated in search bar -->
                     <div class="search-bar-filters">
                         <div class="filter-dropdown-inline">
                             <select id="filterTransportadora" onchange="filterFretes()">
@@ -157,12 +157,18 @@
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                     </button>
-
                     <button class="calendar-btn" onclick="sincronizarDados()" title="Sincronizar">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <polyline points="23 4 23 10 17 10"></polyline>
                             <polyline points="1 20 1 14 7 14"></polyline>
                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+                    <button class="calendar-btn" onclick="toggleEstatisticas()" title="Estatísticas">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
                         </svg>
                     </button>
                 </div>
@@ -195,11 +201,109 @@
         </div>
     </div>
 
+    <!-- INTERFACE ESTATÍSTICAS -->
+    <div class="app-content" id="estatisticasView" style="display: none;">
+        <div class="splash-screen" id="splashScreenEstatisticas" style="display: none;">
+            <div class="loader"></div>
+        </div>
+        
+        <div class="container">
+            <div class="header">
+                <div class="header-left">
+                    <h1>Estatísticas - Entregas Realizadas</h1>
+                    <div id="connectionStatusEstatisticas" class="connection-status offline">
+                        <span class="status-dot"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-bar-wrapper">
+                <div class="search-bar">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" id="searchEstatisticas" placeholder="Pesquisar por NF, órgão..." oninput="filterEstatisticas()">
+
+                    <div class="search-bar-filters">
+                        <div class="filter-dropdown-inline">
+                            <select id="filterTransportadoraEst" onchange="filterEstatisticas()">
+                                <option value="">Todas Transportadoras</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="filter-dropdown-inline">
+                            <select id="filterVendedorEst" onchange="filterEstatisticas()">
+                                <option value="">Todos Vendedores</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <button class="calendar-btn" onclick="sincronizarDados()" title="Sincronizar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+                    <button class="calendar-btn" onclick="toggleEstatisticas()" title="Voltar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 14l-5-5 5-5"></path>
+                            <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="card table-card">
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nº NF</th>
+                                <th>Data Emissão</th>
+                                <th>Órgão</th>
+                                <th>Valor NF</th>
+                                <th>Data Entrega</th>
+                            </tr>
+                        </thead>
+                        <tbody id="estatisticasContainer"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ALERTA FORA DO PRAZO -->
+    <div class="modal-overlay" id="alertModal" style="display: none;">
+        <div class="modal-content alert-modal">
+            <div class="modal-header alert-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" style="flex-shrink: 0;">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <h3 class="modal-title" style="color: #EF4444; margin: 0;">Entregas Fora do Prazo</h3>
+            </div>
+            
+            <div class="modal-body" id="alertModalBody" style="max-height: 400px; overflow-y: auto;"></div>
+
+            <div class="modal-actions">
+                <button type="button" onclick="closeAlertModal()" class="btn-primary">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         setTimeout(() => {
             const splash = document.getElementById('splashScreen');
             if (splash) splash.style.display = 'none';
-        }, 2000);
+        }, 3000);
     </script>
     <script src="script.js"></script>
     <script src="calendar.js"></script>
