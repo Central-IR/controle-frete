@@ -115,6 +115,11 @@ function inicializarApp() {
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
     startPolling();
+    
+    // Verificar e mostrar alerta de fretes fora do prazo (apenas na primeira vez)
+    setTimeout(() => {
+        checkAndShowAlert();
+    }, 1000);
 }
 
 // ============================================
@@ -1409,109 +1414,81 @@ function verificarNotasAtrasadas() {
     mostrarAlertaAtrasos(notasAtrasadas);
 }
 
-function mostrarAlertaAtrasos(notasAtrasadas) {
+// ============================================
+// MODAL DE ALERTA FORA DO PRAZO
+// ============================================
+function checkAndShowAlert() {
+    // Verificar se já mostrou o alerta nesta sessão
+    const alertShown = sessionStorage.getItem('alertShown');
+    if (alertShown) return;
+    
+    // Buscar fretes fora do prazo
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
     
-    // Calcular dias de atraso
-    const calcularDiasAtraso = (previsao) => {
-        const previsaoDate = new Date(previsao + 'T00:00:00');
-        const diff = hoje - previsaoDate;
-        return Math.floor(diff / (1000 * 60 * 60 * 24));
-    };
+    const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+    const foraDoPrazo = fretes.filter(f => {
+        const tipo = f.tipo_nf || 'ENVIO';
+        if (!tiposComStatus.includes(tipo)) return false;
+        if (f.status === 'ENTREGUE') return false;
+        if (!f.previsao_entrega) return false;
+        
+        const previsao = new Date(f.previsao_entrega + 'T00:00:00');
+        previsao.setHours(0, 0, 0, 0);
+        return previsao < hoje;
+    });
     
-    // Limitar a 5 notas mais atrasadas
-    const notasMostrar = notasAtrasadas.slice(0, 5);
+    if (foraDoPrazo.length === 0) return;
     
-    const linhasTabela = notasMostrar.map(nota => {
-        const diasAtraso = calcularDiasAtraso(nota.previsao_entrega);
-        return `
-            <tr>
-                <td><strong>${nota.numero_nf}</strong></td>
-                <td>${nota.nome_orgao}</td>
-                <td>${nota.transportadora}</td>
-                <td style="white-space: nowrap;">${formatDate(nota.previsao_entrega)}</td>
-                <td style="text-align: center;">
-                    <span style="background: rgba(239, 68, 68, 0.15); color: #EF4444; padding: 4px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">
-                        ${diasAtraso} ${diasAtraso === 1 ? 'DIA' : 'DIAS'}
-                    </span>
-                </td>
-            </tr>
-        `;
-    }).join('');
+    // Marcar como exibido
+    sessionStorage.setItem('alertShown', 'true');
     
-    const mensagemRodape = notasAtrasadas.length > 5 
-        ? `<p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem; text-align: center;">
-            + ${notasAtrasadas.length - 5} ${notasAtrasadas.length - 5 === 1 ? 'outra nota' : 'outras notas'} em atraso
-           </p>`
-        : '';
+    // Mostrar modal
+    showAlertModal(foraDoPrazo);
+}
+
+function showAlertModal(fretes) {
+    const modalBody = document.getElementById('alertModalBody');
+    if (!modalBody) return;
     
-    const modalHTML = `
-        <div class="modal-overlay" id="alertaAtrasosModal" style="z-index: 999999;">
-            <div class="modal-content" style="max-width: 900px; width: 90%;">
-                <div class="modal-header" style="border-bottom: 3px solid #EF4444; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; background: rgba(239, 68, 68, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.5">
-                                <path d="M12 9v4m0 4h.01M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="modal-title" style="margin: 0; color: #EF4444; font-size: 1.4rem;">
-                                ⚠️ ATENÇÃO: ${notasAtrasadas.length} ${notasAtrasadas.length === 1 ? 'NOTA EM ATRASO' : 'NOTAS EM ATRASO'}
-                            </h3>
-                            <p style="margin: 0.25rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">
-                                ${notasAtrasadas.length === 1 ? 'Esta nota passou' : 'Estas notas passaram'} da previsão de entrega
-                            </p>
-                        </div>
-                    </div>
+    modalBody.innerHTML = fretes.map(frete => `
+        <div class="alert-item">
+            <div class="alert-item-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            <div class="alert-item-content">
+                <div class="alert-item-title">
+                    NF ${frete.numero_nf}
                 </div>
-                
-                <div style="overflow-x: auto; margin-bottom: 1.5rem;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border-color);">
-                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">NF</th>
-                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">ÓRGÃO</th>
-                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">TRANSPORTADORA</th>
-                                <th style="padding: 12px; text-align: left; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">PREVISÃO</th>
-                                <th style="padding: 12px; text-align: center; font-size: 0.85rem; text-transform: uppercase; color: var(--text-primary);">ATRASO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${linhasTabela}
-                        </tbody>
-                    </table>
-                </div>
-                
-                ${mensagemRodape}
-                
-                <div class="modal-actions" style="border-top: 2px solid var(--border-color); padding-top: 1.5rem; margin-top: 1.5rem;">
-                    <button type="button" class="save" onclick="fecharAlertaAtrasos()" style="min-width: 120px;">
-                        ENTENDIDO
-                    </button>
+                <div class="alert-item-info">
+                    <span><strong>Emissão:</strong> ${formatDate(frete.data_emissao)}</span>
+                    <span><strong>Previsão:</strong> ${formatDate(frete.previsao_entrega)}</span>
+                    <span><strong>Órgão:</strong> ${frete.nome_orgao}</span>
                 </div>
             </div>
         </div>
-    `;
+    `).join('');
     
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Animação de entrada
-    const modal = document.getElementById('alertaAtrasosModal');
-    setTimeout(() => {
-        modal.style.opacity = '1';
-    }, 10);
+    const alertModal = document.getElementById('alertModal');
+    if (alertModal) {
+        alertModal.style.display = 'flex';
+    }
 }
 
-window.fecharAlertaAtrasos = function() {
-    const modal = document.getElementById('alertaAtrasosModal');
-    if (modal) {
-        modal.style.animation = 'fadeOut 0.2s ease forwards';
-        setTimeout(() => modal.remove(), 200);
+function closeAlertModal() {
+    const alertModal = document.getElementById('alertModal');
+    if (alertModal) {
+        alertModal.style.display = 'none';
     }
-};
+}
+
+window.closeAlertModal = closeAlertModal;
 
 // Limpar flag ao fechar a página (para mostrar novamente na próxima sessão)
 window.addEventListener('beforeunload', () => {
-    sessionStorage.removeItem('alertaAtrasosExibido');
+    sessionStorage.removeItem('alertShown');
 });
