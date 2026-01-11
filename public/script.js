@@ -1,6 +1,7 @@
 // ============================================
 // CONFIGURAÇÃO
 // ============================================
+const DEVELOPMENT_MODE = false;
 const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
 const API_URL = 'https://controle-frete.onrender.com/api';
 
@@ -42,7 +43,13 @@ function getTipoNfLabel(tipo) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    verificarAutenticacao();
+    if (DEVELOPMENT_MODE) {
+        console.log('⚠️ MODO DESENVOLVIMENTO ATIVADO');
+        sessionToken = 'dev-mode';
+        inicializarApp();
+    } else {
+        verificarAutenticacao();
+    }
 });
 
 // ============================================
@@ -107,16 +114,21 @@ function inicializarApp() {
 // ============================================
 async function checkServerStatus() {
     try {
+        const headers = {
+            'Accept': 'application/json'
+        };
+        
+        if (!DEVELOPMENT_MODE && sessionToken) {
+            headers['X-Session-Token'] = sessionToken;
+        }
+
         const response = await fetch(`${API_URL}/fretes`, {
             method: 'GET',
-            headers: { 
-                'X-Session-Token': sessionToken,
-                'Accept': 'application/json'
-            },
+            headers: headers,
             mode: 'cors'
         });
 
-        if (response.status === 401) {
+        if (!DEVELOPMENT_MODE && response.status === 401) {
             sessionStorage.removeItem('controleFreteSession');
             mostrarTelaAcessoNegado('Sua sessão expirou');
             return false;
