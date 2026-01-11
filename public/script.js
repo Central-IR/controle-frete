@@ -103,6 +103,14 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
 }
 
 function inicializarApp() {
+    // Aguardar o DOM estar pronto
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            inicializarApp();
+        });
+        return;
+    }
+    
     updateDisplay();
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
@@ -240,6 +248,18 @@ function startPolling() {
 // DASHBOARD ATUALIZADO
 // ============================================
 function updateDashboard() {
+    // Verificar se os elementos existem
+    const statEntregues = document.getElementById('statEntregues');
+    const statForaPrazo = document.getElementById('statForaPrazo');
+    const statTransito = document.getElementById('statTransito');
+    const statValorTotal = document.getElementById('statValorTotal');
+    const statFrete = document.getElementById('statFrete');
+    
+    if (!statEntregues || !statForaPrazo || !statTransito || !statValorTotal || !statFrete) {
+        console.warn('⚠️ Elementos do dashboard não encontrados');
+        return;
+    }
+    
     const fretesMesAtual = fretes.filter(f => {
         const data = new Date(f.data_emissao + 'T00:00:00');
         return data.getMonth() === currentMonth.getMonth() && data.getFullYear() === currentMonth.getFullYear();
@@ -275,22 +295,32 @@ function updateDashboard() {
     const valorTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
     const freteTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
     
-    document.getElementById('statEntregues').textContent = entregues;
-    document.getElementById('statForaPrazo').textContent = foraPrazo;
-    document.getElementById('statTransito').textContent = transito;
-    document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    document.getElementById('statFrete').textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    statEntregues.textContent = entregues;
+    statForaPrazo.textContent = foraPrazo;
+    statTransito.textContent = transito;
+    statValorTotal.textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    statFrete.textContent = `R$ ${freteTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
+    // BADGE DE ALERTA - criar dinamicamente
     const cardForaPrazo = document.getElementById('cardForaPrazo');
-    const pulseBadge = document.getElementById('pulseBadge');
+    if (!cardForaPrazo) return;
     
+    // Remover badge existente
+    let pulseBadge = cardForaPrazo.querySelector('.pulse-badge');
+    if (pulseBadge) {
+        pulseBadge.remove();
+    }
+    
+    // Criar novo badge se houver itens fora do prazo
     if (foraPrazo > 0) {
         cardForaPrazo.classList.add('has-alert');
-        pulseBadge.style.display = 'flex';
+        
+        pulseBadge = document.createElement('div');
+        pulseBadge.className = 'pulse-badge';
         pulseBadge.textContent = foraPrazo;
+        cardForaPrazo.appendChild(pulseBadge);
     } else {
         cardForaPrazo.classList.remove('has-alert');
-        pulseBadge.style.display = 'none';
     }
 }
 
