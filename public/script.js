@@ -115,11 +115,6 @@ function inicializarApp() {
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
     startPolling();
-    
-    // Verificar e mostrar alerta de fretes fora do prazo (apenas na primeira vez)
-    setTimeout(() => {
-        checkAndShowAlert();
-    }, 1000);
 }
 
 // ============================================
@@ -265,6 +260,7 @@ function updateDashboard() {
         return;
     }
     
+    // MONITORAR TODOS OS MESES (não filtrar por mês atual)
     const fretesMesAtual = fretes.filter(f => {
         const data = new Date(f.data_emissao + 'T00:00:00');
         return data.getMonth() === currentMonth.getMonth() && data.getFullYear() === currentMonth.getFullYear();
@@ -272,7 +268,13 @@ function updateDashboard() {
 
     // FILTRAR NOTAS QUE USAM STATUS: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
     const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
-    const fretesComStatus = fretesMesAtual.filter(f => {
+    const fretesComStatusMesAtual = fretesMesAtual.filter(f => {
+        const tipo = f.tipo_nf || 'ENVIO';
+        return tiposComStatus.includes(tipo);
+    });
+    
+    // PARA FORA DO PRAZO: VERIFICAR TODOS OS FRETES (não apenas do mês)
+    const fretesComStatusTodos = fretes.filter(f => {
         const tipo = f.tipo_nf || 'ENVIO';
         return tiposComStatus.includes(tipo);
     });
@@ -283,10 +285,12 @@ function updateDashboard() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    // STATUS: conta ENVIO + SIMPLES_REMESSA + REMESSA_AMOSTRA
-    const entregues = fretesComStatus.filter(f => f.status === 'ENTREGUE').length;
+    // STATUS DO MÊS ATUAL: conta ENVIO + SIMPLES_REMESSA + REMESSA_AMOSTRA
+    const entregues = fretesComStatusMesAtual.filter(f => f.status === 'ENTREGUE').length;
+    const transito = fretesComStatusMesAtual.filter(f => f.status === 'EM_TRANSITO').length;
     
-    const foraPrazo = fretesComStatus.filter(f => {
+    // FORA DO PRAZO: VERIFICAR TODOS OS MESES
+    const foraPrazo = fretesComStatusTodos.filter(f => {
         if (f.status === 'ENTREGUE') return false;
         if (!f.previsao_entrega) return false;
         const previsao = new Date(f.previsao_entrega + 'T00:00:00');
@@ -294,9 +298,7 @@ function updateDashboard() {
         return previsao < hoje;
     }).length;
     
-    const transito = fretesComStatus.filter(f => f.status === 'EM_TRANSITO').length;
-    
-    // VALORES: conta APENAS ENVIO
+    // VALORES: conta APENAS ENVIO DO MÊS ATUAL
     const valorTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
     const freteTotal = fretesEnvio.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
     
@@ -772,13 +774,13 @@ async function handleSubmit(event) {
             
             // Verificar se mudou o tipo de NF
             if (tipoAnterior && tipoAnterior !== formData.tipo_nf) {
-                showToast(`Tipo de NF alterado para: ${getTipoNfLabel(formData.tipo_nf)}`, 'success');
+                showToast(`NF ${formData.numero_nf || savedData.numero_nf} - Tipo alterado para: ${getTipoNfLabel(formData.tipo_nf)}`, 'success');
             } else {
-                showToast('Frete atualizado!', 'success');
+                showToast(`NF ${formData.numero_nf || savedData.numero_nf} atualizada com sucesso`, 'success');
             }
         } else {
             fretes.push(savedData);
-            showToast('Frete criado!', 'success');
+            showToast(`NF ${formData.numero_nf || savedData.numero_nf} registrada com sucesso`, 'success');
             
             lastDataHash = JSON.stringify(fretes.map(f => f.id));
             updateAllFilters();
@@ -834,6 +836,14 @@ window.toggleEntregue = async function(id) {
             const index = fretes.findIndex(f => String(f.id) === idStr);
             if (index !== -1) {
                 fretes[index] = savedData;
+                
+                // Mostrar mensagem apropriada
+                if (newStatus === 'ENTREGUE') {
+                    showToast(`NF ${savedData.numero_nf} foi entregue`, 'success');
+                } else {
+                    showToast(`Status atualizado: ${newStatus}`, 'success');
+                }
+                
                 updateDashboard();
                 filterFretes();
             }
@@ -1417,12 +1427,8 @@ function verificarNotasAtrasadas() {
 // ============================================
 // MODAL DE ALERTA FORA DO PRAZO
 // ============================================
-function checkAndShowAlert() {
-    // Verificar se já mostrou o alerta nesta sessão
-    const alertShown = sessionStorage.getItem('alertShown');
-    if (alertShown) return;
-    
-    // Buscar fretes fora do prazo
+function showAlertModal() {
+    // Buscar fretes fora do prazo de TODOS OS MESES
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
@@ -1438,46 +1444,52 @@ function checkAndShowAlert() {
         return previsao < hoje;
     });
     
-    if (foraDoPrazo.length === 0) return;
-    
-    // Marcar como exibido
-    sessionStorage.setItem('alertShown', 'true');
-    
-    // Mostrar modal
-    showAlertModal(foraDoPrazo);
-}
-
-function showAlertModal(fretes) {
     const modalBody = document.getElementById('alertModalBody');
     if (!modalBody) return;
     
-    modalBody.innerHTML = fretes.map(frete => `
-        <div class="alert-item">
-            <div class="alert-item-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    if (foraDoPrazo.length === 0) {
+        modalBody.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.3; margin-bottom: 1rem;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 8l0 4"></path>
+                    <path d="M12 16l.01 0"></path>
                 </svg>
+                <p style="font-size: 1.1rem; font-weight: 600; margin: 0;">Nenhuma entrega fora do prazo</p>
+                <p style="font-size: 0.9rem; margin-top: 0.5rem;">Todas as entregas estão dentro do prazo previsto</p>
             </div>
-            <div class="alert-item-content">
-                <div class="alert-item-title">
-                    NF ${frete.numero_nf}
+        `;
+    } else {
+        modalBody.innerHTML = foraDoPrazo.map(frete => `
+            <div class="alert-item">
+                <div class="alert-item-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
                 </div>
-                <div class="alert-item-info">
-                    <span><strong>Emissão:</strong> ${formatDate(frete.data_emissao)}</span>
-                    <span><strong>Previsão:</strong> ${formatDate(frete.previsao_entrega)}</span>
-                    <span><strong>Órgão:</strong> ${frete.nome_orgao}</span>
+                <div class="alert-item-content">
+                    <div class="alert-item-title">
+                        NF ${frete.numero_nf}
+                    </div>
+                    <div class="alert-item-info">
+                        <span><strong>Emissão:</strong> ${formatDate(frete.data_emissao)}</span>
+                        <span><strong>Previsão:</strong> ${formatDate(frete.previsao_entrega)}</span>
+                        <span><strong>Órgão:</strong> ${frete.nome_orgao}</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+    }
     
     const alertModal = document.getElementById('alertModal');
     if (alertModal) {
         alertModal.style.display = 'flex';
     }
 }
+
+window.showAlertModal = showAlertModal;
 
 function closeAlertModal() {
     const alertModal = document.getElementById('alertModal');
