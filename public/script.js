@@ -767,10 +767,10 @@ async function handleSubmit(event) {
             await loadFretes(false);
             
             // Mensagem de atualização
-            showToast(`${formData.numero_nf || savedData.numero_nf} Atualizado`, 'success');
+            showToast(`NF ${formData.numero_nf || savedData.numero_nf} Atualizado`, 'success');
         } else {
             fretes.push(savedData);
-            showToast(`${formData.numero_nf || savedData.numero_nf} Registrado`, 'success');
+            showToast(`NF ${formData.numero_nf || savedData.numero_nf} Registrado`, 'success');
             
             lastDataHash = JSON.stringify(fretes.map(f => f.id));
             updateAllFilters();
@@ -829,7 +829,7 @@ window.toggleEntregue = async function(id) {
                 
                 // Mostrar mensagem apenas ao marcar como entregue
                 if (novoStatus === 'ENTREGUE') {
-                    showToast(`${savedData.numero_nf} Entregue`, 'success');
+                    showToast(`NF ${savedData.numero_nf} Entregue`, 'success');
                 }
                 
                 updateDashboard();
@@ -917,7 +917,7 @@ window.deleteFrete = async function(id) {
     updateAllFilters();
     updateDashboard();
     filterFretes();
-    showToast(`${numeroNF} Excluído`, 'success');
+    showToast(`NF ${numeroNF} Excluído`, 'success');
 
     if (isOnline) {
         try {
