@@ -838,10 +838,10 @@ window.toggleEntregue = async function(id) {
                 fretes[index] = savedData;
                 
                 // Mostrar mensagem apropriada
-                if (newStatus === 'ENTREGUE') {
+                if (novoStatus === 'ENTREGUE') {
                     showToast(`NF ${savedData.numero_nf} foi entregue`, 'success');
                 } else {
-                    showToast(`Status atualizado: ${newStatus}`, 'success');
+                    showToast(`Status atualizado: ${novoStatus}`, 'success');
                 }
                 
                 updateDashboard();
@@ -1444,6 +1444,13 @@ function showAlertModal() {
         return previsao < hoje;
     });
     
+    // Ordenar por data de previsão (mais atrasadas primeiro)
+    foraDoPrazo.sort((a, b) => {
+        const dataA = new Date(a.previsao_entrega);
+        const dataB = new Date(b.previsao_entrega);
+        return dataA - dataB;
+    });
+    
     const modalBody = document.getElementById('alertModalBody');
     if (!modalBody) return;
     
@@ -1460,27 +1467,68 @@ function showAlertModal() {
             </div>
         `;
     } else {
-        modalBody.innerHTML = foraDoPrazo.map(frete => `
-            <div class="alert-item">
-                <div class="alert-item-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                </div>
-                <div class="alert-item-content">
-                    <div class="alert-item-title">
-                        NF ${frete.numero_nf}
-                    </div>
-                    <div class="alert-item-info">
-                        <span><strong>Emissão:</strong> ${formatDate(frete.data_emissao)}</span>
-                        <span><strong>Previsão:</strong> ${formatDate(frete.previsao_entrega)}</span>
-                        <span><strong>Órgão:</strong> ${frete.nome_orgao}</span>
-                    </div>
-                </div>
+        // Renderizar em formato de tabela
+        const displayValue = (val) => {
+            if (!val || val === 'NÃO INFORMADO') return '-';
+            return val;
+        };
+        
+        modalBody.innerHTML = `
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>Nº NF</th>
+                            <th>Data Emissão</th>
+                            <th>Órgão</th>
+                            <th>Vendedor</th>
+                            <th>Transportadora</th>
+                            <th>Valor NF</th>
+                            <th>Previsão</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${foraDoPrazo.map(f => {
+                            const isEntregue = f.status === 'ENTREGUE';
+                            const tiposComCheckbox = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+                            const tipoNf = f.tipo_nf || 'ENVIO';
+                            const showCheckbox = tiposComCheckbox.includes(tipoNf);
+                            
+                            return `
+                            <tr class="${isEntregue ? 'row-entregue' : ''}">
+                                <td style="text-align: center; padding: 8px;">
+                                    ${showCheckbox ? `
+                                    <div class="checkbox-wrapper">
+                                        <input 
+                                            type="checkbox" 
+                                            id="check-alert-${f.id}"
+                                            ${isEntregue ? 'checked' : ''}
+                                            onchange="toggleEntregue('${f.id}')"
+                                            class="styled-checkbox"
+                                        >
+                                        <label for="check-alert-${f.id}" class="checkbox-label-styled"></label>
+                                    </div>
+                                    ` : ''}
+                                </td>
+                                <td><strong>${f.numero_nf || '-'}</strong></td>
+                                <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
+                                <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao || '-'}</td>
+                                <td>${displayValue(f.vendedor)}</td>
+                                <td>${displayValue(f.transportadora)}</td>
+                                <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
+                                <td style="white-space: nowrap; color: #EF4444; font-weight: 600;">${formatDate(f.previsao_entrega)}</td>
+                                <td class="actions-cell" style="text-align: center; white-space: nowrap;">
+                                    <button onclick="viewFreteFromAlert('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
+                                    <button onclick="editFreteFromAlert('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
+                                </td>
+                            </tr>
+                        `}).join('')}
+                    </tbody>
+                </table>
             </div>
-        `).join('');
+        `;
     }
     
     const alertModal = document.getElementById('alertModal');
@@ -1491,6 +1539,17 @@ function showAlertModal() {
 
 window.showAlertModal = showAlertModal;
 
+// Funções auxiliares para ações dentro do modal
+window.viewFreteFromAlert = function(id) {
+    closeAlertModal();
+    viewFrete(id);
+};
+
+window.editFreteFromAlert = function(id) {
+    closeAlertModal();
+    editFrete(id);
+};
+
 function closeAlertModal() {
     const alertModal = document.getElementById('alertModal');
     if (alertModal) {
@@ -1499,6 +1558,12 @@ function closeAlertModal() {
 }
 
 window.closeAlertModal = closeAlertModal;
+
+// Função para voltar à interface principal (removemos a tela de estatísticas)
+window.voltarParaPrincipal = function() {
+    // Não faz nada, pois removemos a tela de estatísticas
+    console.log('Função voltarParaPrincipal - tela de estatísticas foi removida');
+};
 
 // Limpar flag ao fechar a página (para mostrar novamente na próxima sessão)
 window.addEventListener('beforeunload', () => {
