@@ -1134,8 +1134,32 @@ tbody tr:hover { background: var(--table-hover); }
    MODAL DE ALERTA (FORA DO PRAZO)
    ============================================ */
 .alert-modal {
-    max-width: 700px;
-    width: 90%;
+    max-width: 800px;
+    width: 95%;
+}
+
+.alert-modal .modal-body {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.alert-modal table {
+    width: 100%;
+    table-layout: auto;
+}
+
+.alert-modal th,
+.alert-modal td {
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+}
+
+.alert-modal th:nth-child(3),
+.alert-modal td:nth-child(3) {
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 300px;
 }
 
 .alert-header {
