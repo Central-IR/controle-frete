@@ -231,8 +231,33 @@ async function loadFretes(showMessage = false) {
 }
 
 // Função global para sincronização manual
-window.sincronizarDados = function() {
-    loadFretes(true);
+window.sincronizarDados = async function() {
+    console.log('🔄 Sincronizando dados...');
+    
+    // Adicionar animação de rotação ao ícone
+    const syncButtons = document.querySelectorAll('button[onclick="sincronizarDados()"]');
+    syncButtons.forEach(btn => {
+        const svg = btn.querySelector('svg');
+        if (svg) {
+            svg.style.animation = 'spin 1s linear infinite';
+        }
+    });
+    
+    // Mostrar toast de sincronização
+    showToast('Sincronizando dados...', 'success');
+    
+    // Aguardar o carregamento
+    await loadFretes(true);
+    
+    // Remover animação após sincronização
+    setTimeout(() => {
+        syncButtons.forEach(btn => {
+            const svg = btn.querySelector('svg');
+            if (svg) {
+                svg.style.animation = '';
+            }
+        });
+    }, 1000);
 };
 
 function startPolling() {
