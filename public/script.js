@@ -244,7 +244,7 @@ window.sincronizarDados = async function() {
     });
     
     // Mostrar toast de sincronização
-    showToast('Sincronizando dados...', 'success');
+    showToast('Dados sincronizados', 'success');
     
     // Aguardar o carregamento
     await loadFretes(true);
