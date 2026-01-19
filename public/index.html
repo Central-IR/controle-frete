@@ -197,19 +197,18 @@
     <!-- MODAL DE ALERTA FORA DO PRAZO -->
     <div class="modal-overlay" id="alertModal" style="display: none;">
         <div class="modal-content alert-modal">
-            <div class="modal-header alert-header">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" style="flex-shrink: 0;">
+            <div class="modal-header-alert">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" style="margin: 0 auto; display: block;">
                     <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                     <line x1="12" y1="9" x2="12" y2="13"></line>
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
-                <h3 class="modal-title">Fretes Fora do Prazo</h3>
             </div>
             
             <div class="modal-body" id="alertModalBody"></div>
 
-            <div class="modal-actions">
-                <button type="button" onclick="closeAlertModal()" class="btn-primary">Fechar</button>
+            <div class="modal-actions-alert">
+                <button type="button" onclick="closeAlertModal()" class="btn-close-red">Fechar</button>
             </div>
         </div>
     </div>
@@ -217,14 +216,9 @@
     <!-- MODAL VALOR TOTAL POR MÊS -->
     <div class="modal-overlay" id="valorTotalModal" style="display: none;">
         <div class="modal-content valor-total-modal">
-            <div class="modal-header-valor-total">
-                <h3 class="modal-title">Valores Mensais - 2026</h3>
-                <button class="close-modal" onclick="closeValorTotalModal()">✕</button>
-            </div>
-            
             <div class="modal-body" id="valorTotalModalBody"></div>
 
-            <div class="modal-actions">
+            <div class="modal-actions-valor-total">
                 <button type="button" onclick="closeValorTotalModal()" class="btn-close-red">Fechar</button>
             </div>
         </div>
