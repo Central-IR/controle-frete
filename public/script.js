@@ -319,7 +319,7 @@ function updateDashboard() {
 }
 
 // ============================================
-// MODAL VALOR TOTAL POR MÊS - VERSÃO ATUALIZADA COM CARDS
+// MODAL VALOR TOTAL POR MÊS - VERSÃO SIMPLIFICADA 6+6
 // ============================================
 window.showValorTotalModal = function() {
     const anoAtual = currentMonth.getFullYear();
@@ -350,71 +350,73 @@ window.showValorTotalModal = function() {
     const modalBody = document.getElementById('valorTotalModalBody');
     if (!modalBody) return;
     
-    modalBody.innerHTML = `
-        <div class="valores-mensais-grid">
-            ${mesesAno.map((m, idx) => {
-                let freteTrend = '';
-                let valorTrend = '';
-                let freteTrendClass = '';
-                let valorTrendClass = '';
-                
-                if (idx > 0) {
-                    const mesAnterior = mesesAno[idx - 1];
-                    
-                    // Tendência do frete
-                    if (m.frete > mesAnterior.frete) {
-                        freteTrend = '↑';
-                        freteTrendClass = 'trend-up';
-                    } else if (m.frete < mesAnterior.frete) {
-                        freteTrend = '↓';
-                        freteTrendClass = 'trend-down';
-                    }
-                    
-                    // Tendência do valor
-                    if (m.valor > mesAnterior.valor) {
-                        valorTrend = '↑';
-                        valorTrendClass = 'trend-up';
-                    } else if (m.valor < mesAnterior.valor) {
-                        valorTrend = '↓';
-                        valorTrendClass = 'trend-down';
-                    }
-                }
-                
-                return `
-                <div class="valor-mes-card">
-                    <div class="valor-mes-header">
-                        <h4>${m.mes.toUpperCase()}</h4>
-                    </div>
-                    <div class="valor-mes-body">
-                        <div class="valor-mes-item">
-                            <span class="valor-mes-label">Frete</span>
-                            <div class="valor-mes-value">
-                                <span class="valor-frete">R$ ${m.frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                ${freteTrend ? `<span class="trend-icon ${freteTrendClass}">${freteTrend}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="valor-mes-item">
-                            <span class="valor-mes-label">Valor</span>
-                            <div class="valor-mes-value">
-                                <span class="valor-total">R$ ${m.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                ${valorTrend ? `<span class="trend-icon ${valorTrendClass}">${valorTrend}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
+    // Função para gerar card de mês
+    const gerarCard = (m, idx) => {
+        let freteTrend = '';
+        let valorTrend = '';
+        let freteTrendClass = '';
+        let valorTrendClass = '';
+        
+        if (idx > 0) {
+            const mesAnterior = mesesAno[idx - 1];
+            
+            if (m.frete > mesAnterior.frete) {
+                freteTrend = '↑';
+                freteTrendClass = 'trend-up';
+            } else if (m.frete < mesAnterior.frete) {
+                freteTrend = '↓';
+                freteTrendClass = 'trend-down';
+            }
+            
+            if (m.valor > mesAnterior.valor) {
+                valorTrend = '↑';
+                valorTrendClass = 'trend-up';
+            } else if (m.valor < mesAnterior.valor) {
+                valorTrend = '↓';
+                valorTrendClass = 'trend-down';
+            }
+        }
+        
+        return `
+        <div class="valor-mes-card-simple">
+            <div class="mes-nome">${m.mes.substring(0, 3).toUpperCase()}</div>
+            <div class="mes-valores">
+                <div class="mes-valor-item">
+                    <span class="valor-num frete-color">R$ ${m.frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    ${freteTrend ? `<span class="trend-simple ${freteTrendClass}">${freteTrend}</span>` : ''}
                 </div>
-            `}).join('')}
+                <div class="mes-valor-item">
+                    <span class="valor-num valor-color">R$ ${m.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    ${valorTrend ? `<span class="trend-simple ${valorTrendClass}">${valorTrend}</span>` : ''}
+                </div>
+            </div>
+        </div>
+        `;
+    };
+    
+    // Dividir em dois grupos: 6 primeiros e 6 últimos
+    const primeirosSeisMeses = mesesAno.slice(0, 6);
+    const ultimosSeisMeses = mesesAno.slice(6, 12);
+    
+    modalBody.innerHTML = `
+        <div class="valores-container-semestral">
+            <div class="semestre-row">
+                ${primeirosSeisMeses.map((m, idx) => gerarCard(m, idx)).join('')}
+            </div>
+            
+            <div class="semestre-row">
+                ${ultimosSeisMeses.map((m, idx) => gerarCard(m, idx + 6)).join('')}
+            </div>
         </div>
         
-        <div class="valores-totais-footer">
-            <div class="valor-total-card-summary">
-                <div class="total-item">
-                    <span class="total-label">FRETE TOTAL</span>
-                    <span class="total-value total-frete">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div class="total-item">
-                    <span class="total-label">VALOR TOTAL</span>
-                    <span class="total-value total-valor">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
+        <div class="valores-totais-simple">
+            <div class="total-box frete-total-box">
+                <div class="total-label-simple">FRETE TOTAL</div>
+                <div class="total-value-simple">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            </div>
+            <div class="total-box valor-total-box">
+                <div class="total-label-simple">VALOR TOTAL</div>
+                <div class="total-value-simple">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
         </div>
     `;
