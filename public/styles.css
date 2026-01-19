@@ -1097,14 +1097,15 @@ button.small {
 .valor-num {
     font-size: 0.85rem;
     font-weight: 700;
+    color: var(--text-primary);
 }
 
 .frete-color {
-    color: var(--info-color);
+    color: var(--text-primary);
 }
 
 .valor-color {
-    color: var(--success-color);
+    color: var(--text-primary);
 }
 
 /* SETAS DE TENDÊNCIA SIMPLIFICADAS */
