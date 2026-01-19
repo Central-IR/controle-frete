@@ -319,7 +319,7 @@ function updateDashboard() {
 }
 
 // ============================================
-// MODAL VALOR TOTAL POR MÊS - VERSÃO ATUALIZADA
+// MODAL VALOR TOTAL POR MÊS - VERSÃO ATUALIZADA COM CARDS
 // ============================================
 window.showValorTotalModal = function() {
     const anoAtual = currentMonth.getFullYear();
@@ -351,52 +351,71 @@ window.showValorTotalModal = function() {
     if (!modalBody) return;
     
     modalBody.innerHTML = `
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>MÊS</th>
-                        <th style="text-align: right;">FRETE</th>
-                        <th style="text-align: right;">VALOR</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${mesesAno.map((m, idx) => {
-                        let freteTrend = '';
-                        let valorTrend = '';
-                        
-                        if (idx > 0) {
-                            const mesAnterior = mesesAno[idx - 1];
-                            
-                            // Tendência do frete
-                            if (m.frete > mesAnterior.frete) {
-                                freteTrend = '<span class="trend-indicator trend-up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></span>';
-                            } else if (m.frete < mesAnterior.frete) {
-                                freteTrend = '<span class="trend-indicator trend-down"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></span>';
-                            }
-                            
-                            // Tendência do valor
-                            if (m.valor > mesAnterior.valor) {
-                                valorTrend = '<span class="trend-indicator trend-up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></span>';
-                            } else if (m.valor < mesAnterior.valor) {
-                                valorTrend = '<span class="trend-indicator trend-down"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></span>';
-                            }
-                        }
-                        
-                        return `
-                        <tr>
-                            <td><strong>${m.mes.toUpperCase()}</strong></td>
-                            <td style="text-align: right;">R$ ${m.frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${freteTrend}</td>
-                            <td style="text-align: right;">R$ ${m.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${valorTrend}</td>
-                        </tr>
-                    `}).join('')}
-                    <tr style="border-top: 3px solid var(--border-color); font-weight: 700;">
-                        <td><strong>TOTAL</strong></td>
-                        <td style="text-align: right; color: var(--info-color);">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td style="text-align: right; color: var(--success-color);">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="valores-mensais-grid">
+            ${mesesAno.map((m, idx) => {
+                let freteTrend = '';
+                let valorTrend = '';
+                let freteTrendClass = '';
+                let valorTrendClass = '';
+                
+                if (idx > 0) {
+                    const mesAnterior = mesesAno[idx - 1];
+                    
+                    // Tendência do frete
+                    if (m.frete > mesAnterior.frete) {
+                        freteTrend = '↑';
+                        freteTrendClass = 'trend-up';
+                    } else if (m.frete < mesAnterior.frete) {
+                        freteTrend = '↓';
+                        freteTrendClass = 'trend-down';
+                    }
+                    
+                    // Tendência do valor
+                    if (m.valor > mesAnterior.valor) {
+                        valorTrend = '↑';
+                        valorTrendClass = 'trend-up';
+                    } else if (m.valor < mesAnterior.valor) {
+                        valorTrend = '↓';
+                        valorTrendClass = 'trend-down';
+                    }
+                }
+                
+                return `
+                <div class="valor-mes-card">
+                    <div class="valor-mes-header">
+                        <h4>${m.mes.toUpperCase()}</h4>
+                    </div>
+                    <div class="valor-mes-body">
+                        <div class="valor-mes-item">
+                            <span class="valor-mes-label">Frete</span>
+                            <div class="valor-mes-value">
+                                <span class="valor-frete">R$ ${m.frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                ${freteTrend ? `<span class="trend-icon ${freteTrendClass}">${freteTrend}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="valor-mes-item">
+                            <span class="valor-mes-label">Valor</span>
+                            <div class="valor-mes-value">
+                                <span class="valor-total">R$ ${m.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                ${valorTrend ? `<span class="trend-icon ${valorTrendClass}">${valorTrend}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `}).join('')}
+        </div>
+        
+        <div class="valores-totais-footer">
+            <div class="valor-total-card-summary">
+                <div class="total-item">
+                    <span class="total-label">FRETE TOTAL</span>
+                    <span class="total-value total-frete">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+                <div class="total-item">
+                    <span class="total-label">VALOR TOTAL</span>
+                    <span class="total-value total-valor">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                </div>
+            </div>
         </div>
     `;
     
