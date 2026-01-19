@@ -31,7 +31,297 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         verificarAutenticacao();
     }
+    
+    // Event delegation para botões da tabela
+    setupEventDelegation();
 });
+
+// ============================================
+// EVENT DELEGATION PARA BOTÕES
+// ============================================
+function setupEventDelegation() {
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        
+        // Botão Ver
+        if (target.classList.contains('action-btn') && target.classList.contains('view')) {
+            e.preventDefault();
+            const row = target.closest('tr');
+            const id = row?.dataset.id;
+            if (id) {
+                console.log('🔍 Ver clicado - ID:', id);
+                viewFreteHandler(id);
+            }
+        }
+        
+        // Botão Editar
+        if (target.classList.contains('action-btn') && target.classList.contains('edit')) {
+            e.preventDefault();
+            const row = target.closest('tr');
+            const id = row?.dataset.id;
+            if (id) {
+                console.log('✏️ Editar clicado - ID:', id);
+                editFreteHandler(id);
+            }
+        }
+        
+        // Botão Excluir
+        if (target.classList.contains('action-btn') && target.classList.contains('delete')) {
+            e.preventDefault();
+            const row = target.closest('tr');
+            const id = row?.dataset.id;
+            if (id) {
+                console.log('🗑️ Excluir clicado - ID:', id);
+                deleteFreteHandler(id);
+            }
+        }
+    });
+    
+    // Event delegation para checkbox
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('styled-checkbox')) {
+            const row = e.target.closest('tr');
+            const id = row?.dataset.id;
+            if (id) {
+                console.log('✅ Checkbox alterado - ID:', id);
+                toggleEntregueHandler(id);
+            }
+        }
+    });
+}
+
+// ============================================
+// HANDLERS DOS BOTÕES
+// ============================================
+function viewFreteHandler(id) {
+    const idStr = String(id);
+    const frete = fretes.find(f => String(f.id) === idStr);
+    
+    if (!frete) {
+        console.error('Frete não encontrado:', id);
+        showToast('Frete não encontrado!', 'error');
+        return;
+    }
+
+    let observacoesArray = [];
+    if (frete.observacoes) {
+        try {
+            observacoesArray = typeof frete.observacoes === 'string' 
+                ? JSON.parse(frete.observacoes) 
+                : frete.observacoes;
+        } catch (e) {
+            console.error('Erro ao parsear observações:', e);
+        }
+    }
+
+    const observacoesHTML = observacoesArray.length > 0 
+        ? observacoesArray.map(obs => `
+            <div class="observacao-item-view">
+                <div class="observacao-header">
+                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                </div>
+                <p class="observacao-texto">${obs.texto}</p>
+            </div>
+        `).join('')
+        : '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 1rem;">Nenhuma observação registrada</p>';
+
+    const displayValue = (val) => {
+        if (!val || val === 'NÃO INFORMADO') return '-';
+        return val;
+    };
+
+    const modalHTML = `
+        <div class="modal-overlay" id="viewModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Detalhes do Frete</h3>
+                    <button class="close-modal" onclick="closeViewModal()">✕</button>
+                </div>
+                
+                <div class="tabs-container">
+                    <div class="tabs-nav">
+                        <button class="tab-btn active" onclick="switchViewTab(0)">Dados da Nota</button>
+                        <button class="tab-btn" onclick="switchViewTab(1)">Órgão</button>
+                        <button class="tab-btn" onclick="switchViewTab(2)">Transporte</button>
+                        <button class="tab-btn" onclick="switchViewTab(3)">Observações</button>
+                    </div>
+
+                    <div class="tab-content active" id="view-tab-nota">
+                        <div class="info-section">
+                            <h4>Dados da Nota Fiscal</h4>
+                            <p><strong>Número NF:</strong> ${frete.numero_nf || '-'}</p>
+                            <p><strong>Data Emissão:</strong> ${frete.data_emissao ? formatDate(frete.data_emissao) : '-'}</p>
+                            <p><strong>Documento:</strong> ${displayValue(frete.documento)}</p>
+                            <p><strong>Valor NF:</strong> R$ ${frete.valor_nf ? parseFloat(frete.valor_nf).toFixed(2) : '0,00'}</p>
+                            <p><strong>Tipo NF:</strong> ${getTipoNfLabel(frete.tipo_nf)}</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="view-tab-orgao">
+                        <div class="info-section">
+                            <h4>Dados do Órgão</h4>
+                            <p><strong>Nome do Órgão:</strong> ${frete.nome_orgao || '-'}</p>
+                            <p><strong>Contato:</strong> ${displayValue(frete.contato_orgao)}</p>
+                            <p><strong>Vendedor Responsável:</strong> ${displayValue(frete.vendedor)}</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="view-tab-transporte">
+                        <div class="info-section">
+                            <h4>Dados do Transporte</h4>
+                            <p><strong>Transportadora:</strong> ${displayValue(frete.transportadora)}</p>
+                            <p><strong>Valor do Frete:</strong> R$ ${frete.valor_frete ? parseFloat(frete.valor_frete).toFixed(2) : '0,00'}</p>
+                            <p><strong>Data Coleta:</strong> ${frete.data_coleta ? formatDate(frete.data_coleta) : '-'}</p>
+                            <p><strong>Destino:</strong> ${displayValue(frete.cidade_destino)}</p>
+                            <p><strong>Previsão Entrega:</strong> ${frete.previsao_entrega ? formatDate(frete.previsao_entrega) : '-'}</p>
+                            <p><strong>Status:</strong> ${getStatusBadgeForRender(frete)}</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="view-tab-observacoes">
+                        <div class="info-section">
+                            <h4>Observações</h4>
+                            <div class="observacoes-list-view">
+                                ${observacoesHTML}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="secondary" onclick="closeViewModal()">Fechar</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function editFreteHandler(id) {
+    const idStr = String(id);
+    const frete = fretes.find(f => String(f.id) === idStr);
+    
+    if (!frete) {
+        console.error('Frete não encontrado:', id);
+        showToast('Frete não encontrado!', 'error');
+        return;
+    }
+    
+    console.log('Abrindo modal de edição para:', frete);
+    window.showFormModal(idStr);
+}
+
+async function deleteFreteHandler(id) {
+    console.log('deleteFreteHandler chamado com ID:', id);
+    
+    const confirmed = await showConfirm(
+        'Tem certeza que deseja excluir este frete?',
+        {
+            title: 'Excluir Frete',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar',
+            type: 'warning'
+        }
+    );
+
+    if (!confirmed) {
+        console.log('Exclusão cancelada pelo usuário');
+        return;
+    }
+
+    const idStr = String(id);
+    const deletedFrete = fretes.find(f => String(f.id) === idStr);
+    const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
+    
+    fretes = fretes.filter(f => String(f.id) !== idStr);
+    updateAllFilters();
+    updateDashboard();
+    filterFretes();
+    showToast(`NF ${numeroNF} Excluído`, 'success');
+
+    if (isOnline || DEVELOPMENT_MODE) {
+        try {
+            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Session-Token': sessionToken,
+                    'Accept': 'application/json'
+                },
+                mode: 'cors'
+            });
+
+            if (!response.ok) throw new Error('Erro ao deletar');
+        } catch (error) {
+            console.error('❌ Erro ao deletar:', error);
+            if (deletedFrete) {
+                fretes.push(deletedFrete);
+                updateAllFilters();
+                updateDashboard();
+                filterFretes();
+                showToast('Erro ao excluir', 'error');
+            }
+        }
+    }
+}
+
+async function toggleEntregueHandler(id) {
+    console.log('toggleEntregueHandler chamado com ID:', id);
+    
+    const idStr = String(id);
+    const frete = fretes.find(f => String(f.id) === idStr);
+    
+    if (!frete) {
+        console.error('Frete não encontrado:', id);
+        return;
+    }
+    
+    const tiposPermitidos = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+    const tipoNf = frete.tipo_nf || 'ENVIO';
+    
+    if (!tiposPermitidos.includes(tipoNf)) {
+        console.log('Tipo de NF não permite alteração de status:', tipoNf);
+        return;
+    }
+
+    const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
+    console.log('Alterando status de', frete.status, 'para', novoStatus);
+
+    if (isOnline || DEVELOPMENT_MODE) {
+        try {
+            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ status: novoStatus }),
+                mode: 'cors'
+            });
+
+            if (!response.ok) throw new Error('Erro ao atualizar');
+
+            const savedData = await response.json();
+            const index = fretes.findIndex(f => String(f.id) === idStr);
+            if (index !== -1) {
+                fretes[index] = savedData;
+                
+                if (novoStatus === 'ENTREGUE') {
+                    showToast(`NF ${savedData.numero_nf} Entregue`, 'success');
+                }
+                
+                updateDashboard();
+                filterFretes();
+            }
+
+        } catch (error) {
+            console.error('❌ Erro ao atualizar status:', error);
+            showToast('Erro ao atualizar status', 'error');
+        }
+    }
+}
 
 // ============================================
 // AUTENTICAÇÃO
@@ -319,7 +609,7 @@ function updateDashboard() {
 }
 
 // ============================================
-// MODAL VALOR TOTAL POR MÊS - VERSÃO SIMPLIFICADA 6+6
+// MODAL VALOR TOTAL POR MÊS
 // ============================================
 window.showValorTotalModal = function() {
     const anoAtual = currentMonth.getFullYear();
@@ -350,7 +640,6 @@ window.showValorTotalModal = function() {
     const modalBody = document.getElementById('valorTotalModalBody');
     if (!modalBody) return;
     
-    // Função para gerar card de mês
     const gerarCard = (m, idx) => {
         let freteTrend = '';
         let valorTrend = '';
@@ -394,7 +683,6 @@ window.showValorTotalModal = function() {
         `;
     };
     
-    // Dividir em dois grupos: 6 primeiros e 6 últimos
     const primeirosSeisMeses = mesesAno.slice(0, 6);
     const ultimosSeisMeses = mesesAno.slice(6, 12);
     
@@ -783,6 +1071,24 @@ window.switchFormTab = function(index) {
     });
 };
 
+window.switchViewTab = function(index) {
+    document.querySelectorAll('#viewModal .tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+    });
+    
+    document.querySelectorAll('#viewModal .tab-content').forEach((content, i) => {
+        content.classList.toggle('active', i === index);
+    });
+};
+
+window.closeViewModal = function() {
+    const modal = document.getElementById('viewModal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease forwards';
+        setTimeout(() => modal.remove(), 200);
+    }
+};
+
 // ============================================
 // SUBMIT
 // ============================================
@@ -877,269 +1183,6 @@ async function handleSubmit(event) {
         closeFormModal();
     }
 }
-
-// ============================================
-// TOGGLE ENTREGUE (CHECKBOX)
-// ============================================
-window.toggleEntregue = async function(id) {
-    console.log('toggleEntregue chamado com ID:', id);
-    
-    const idStr = String(id);
-    const frete = fretes.find(f => String(f.id) === idStr);
-    
-    if (!frete) {
-        console.error('Frete não encontrado:', id);
-        return;
-    }
-    
-    const tiposPermitidos = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
-    const tipoNf = frete.tipo_nf || 'ENVIO';
-    
-    if (!tiposPermitidos.includes(tipoNf)) {
-        console.log('Tipo de NF não permite alteração de status:', tipoNf);
-        return;
-    }
-
-    const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
-    console.log('Alterando status de', frete.status, 'para', novoStatus);
-
-    if (isOnline || DEVELOPMENT_MODE) {
-        try {
-            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-Token': sessionToken,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ status: novoStatus }),
-                mode: 'cors'
-            });
-
-            if (!response.ok) throw new Error('Erro ao atualizar');
-
-            const savedData = await response.json();
-            const index = fretes.findIndex(f => String(f.id) === idStr);
-            if (index !== -1) {
-                fretes[index] = savedData;
-                
-                if (novoStatus === 'ENTREGUE') {
-                    showToast(`NF ${savedData.numero_nf} Entregue`, 'success');
-                }
-                
-                updateDashboard();
-                filterFretes();
-            }
-
-        } catch (error) {
-            console.error('❌ Erro ao atualizar status:', error);
-            showToast('Erro ao atualizar status', 'error');
-        }
-    }
-};
-
-// ============================================
-// EDIÇÃO - CORRIGIDO
-// ============================================
-window.editFrete = function(id) {
-    console.log('editFrete chamado com ID:', id);
-    
-    const idStr = String(id);
-    const frete = fretes.find(f => String(f.id) === idStr);
-    
-    if (!frete) {
-        console.error('Frete não encontrado:', id);
-        showToast('Frete não encontrado!', 'error');
-        return;
-    }
-    
-    console.log('Abrindo modal de edição para:', frete);
-    window.showFormModal(idStr);
-};
-
-// ============================================
-// EXCLUSÃO - CORRIGIDO
-// ============================================
-window.deleteFrete = async function(id) {
-    console.log('deleteFrete chamado com ID:', id);
-    
-    const confirmed = await showConfirm(
-        'Tem certeza que deseja excluir este frete?',
-        {
-            title: 'Excluir Frete',
-            confirmText: 'Excluir',
-            cancelText: 'Cancelar',
-            type: 'warning'
-        }
-    );
-
-    if (!confirmed) {
-        console.log('Exclusão cancelada pelo usuário');
-        return;
-    }
-
-    const idStr = String(id);
-    const deletedFrete = fretes.find(f => String(f.id) === idStr);
-    const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
-    
-    fretes = fretes.filter(f => String(f.id) !== idStr);
-    updateAllFilters();
-    updateDashboard();
-    filterFretes();
-    showToast(`NF ${numeroNF} Excluído`, 'success');
-
-    if (isOnline || DEVELOPMENT_MODE) {
-        try {
-            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-Session-Token': sessionToken,
-                    'Accept': 'application/json'
-                },
-                mode: 'cors'
-            });
-
-            if (!response.ok) throw new Error('Erro ao deletar');
-        } catch (error) {
-            console.error('❌ Erro ao deletar:', error);
-            if (deletedFrete) {
-                fretes.push(deletedFrete);
-                updateAllFilters();
-                updateDashboard();
-                filterFretes();
-                showToast('Erro ao excluir', 'error');
-            }
-        }
-    }
-};
-
-// ============================================
-// VISUALIZAÇÃO - CORRIGIDO
-// ============================================
-window.viewFrete = function(id) {
-    console.log('viewFrete chamado com ID:', id);
-    
-    const idStr = String(id);
-    const frete = fretes.find(f => String(f.id) === idStr);
-    
-    if (!frete) {
-        console.error('Frete não encontrado:', id);
-        showToast('Frete não encontrado!', 'error');
-        return;
-    }
-
-    let observacoesArray = [];
-    if (frete.observacoes) {
-        try {
-            observacoesArray = typeof frete.observacoes === 'string' 
-                ? JSON.parse(frete.observacoes) 
-                : frete.observacoes;
-        } catch (e) {
-            console.error('Erro ao parsear observações:', e);
-        }
-    }
-
-    const observacoesHTML = observacoesArray.length > 0 
-        ? observacoesArray.map(obs => `
-            <div class="observacao-item-view">
-                <div class="observacao-header">
-                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                </div>
-                <p class="observacao-texto">${obs.texto}</p>
-            </div>
-        `).join('')
-        : '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 1rem;">Nenhuma observação registrada</p>';
-
-    const displayValue = (val) => {
-        if (!val || val === 'NÃO INFORMADO') return '-';
-        return val;
-    };
-
-    const modalHTML = `
-        <div class="modal-overlay" id="viewModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title">Detalhes do Frete</h3>
-                    <button class="close-modal" onclick="closeViewModal()">✕</button>
-                </div>
-                
-                <div class="tabs-container">
-                    <div class="tabs-nav">
-                        <button class="tab-btn active" onclick="switchViewTab(0)">Dados da Nota</button>
-                        <button class="tab-btn" onclick="switchViewTab(1)">Órgão</button>
-                        <button class="tab-btn" onclick="switchViewTab(2)">Transporte</button>
-                        <button class="tab-btn" onclick="switchViewTab(3)">Observações</button>
-                    </div>
-
-                    <div class="tab-content active" id="view-tab-nota">
-                        <div class="info-section">
-                            <h4>Dados da Nota Fiscal</h4>
-                            <p><strong>Número NF:</strong> ${frete.numero_nf || '-'}</p>
-                            <p><strong>Data Emissão:</strong> ${frete.data_emissao ? formatDate(frete.data_emissao) : '-'}</p>
-                            <p><strong>Documento:</strong> ${displayValue(frete.documento)}</p>
-                            <p><strong>Valor NF:</strong> R$ ${frete.valor_nf ? parseFloat(frete.valor_nf).toFixed(2) : '0,00'}</p>
-                            <p><strong>Tipo NF:</strong> ${getTipoNfLabel(frete.tipo_nf)}</p>
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="view-tab-orgao">
-                        <div class="info-section">
-                            <h4>Dados do Órgão</h4>
-                            <p><strong>Nome do Órgão:</strong> ${frete.nome_orgao || '-'}</p>
-                            <p><strong>Contato:</strong> ${displayValue(frete.contato_orgao)}</p>
-                            <p><strong>Vendedor Responsável:</strong> ${displayValue(frete.vendedor)}</p>
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="view-tab-transporte">
-                        <div class="info-section">
-                            <h4>Dados do Transporte</h4>
-                            <p><strong>Transportadora:</strong> ${displayValue(frete.transportadora)}</p>
-                            <p><strong>Valor do Frete:</strong> R$ ${frete.valor_frete ? parseFloat(frete.valor_frete).toFixed(2) : '0,00'}</p>
-                            <p><strong>Data Coleta:</strong> ${frete.data_coleta ? formatDate(frete.data_coleta) : '-'}</p>
-                            <p><strong>Destino:</strong> ${displayValue(frete.cidade_destino)}</p>
-                            <p><strong>Previsão Entrega:</strong> ${frete.previsao_entrega ? formatDate(frete.previsao_entrega) : '-'}</p>
-                            <p><strong>Status:</strong> ${getStatusBadgeForRender(frete)}</p>
-                        </div>
-                    </div>
-
-                    <div class="tab-content" id="view-tab-observacoes">
-                        <div class="info-section">
-                            <h4>Observações</h4>
-                            <div class="observacoes-list-view">
-                                ${observacoesHTML}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button class="secondary" onclick="closeViewModal()">Fechar</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-};
-
-window.closeViewModal = function() {
-    const modal = document.getElementById('viewModal');
-    if (modal) {
-        modal.style.animation = 'fadeOut 0.2s ease forwards';
-        setTimeout(() => modal.remove(), 200);
-    }
-};
-
-window.switchViewTab = function(index) {
-    document.querySelectorAll('#viewModal .tab-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-    });
-    
-    document.querySelectorAll('#viewModal .tab-content').forEach((content, i) => {
-        content.classList.toggle('active', i === index);
-    });
-};
 
 // ============================================
 // FILTROS - ATUALIZAÇÃO DINÂMICA
@@ -1314,7 +1357,7 @@ function filterFretes() {
 }
 
 // ============================================
-// RENDERIZAÇÃO - CORRIGIDA COM DATA-ID
+// RENDERIZAÇÃO COM EVENT DELEGATION
 // ============================================
 function renderFretes(fretesToRender) {
     const container = document.getElementById('fretesContainer');
@@ -1366,7 +1409,6 @@ function renderFretes(fretesToRender) {
                                         type="checkbox" 
                                         id="check-${f.id}"
                                         ${isEntregue ? 'checked' : ''}
-                                        onchange="window.toggleEntregue('${f.id}')"
                                         class="styled-checkbox"
                                     >
                                     <label for="check-${f.id}" class="checkbox-label-styled"></label>
@@ -1381,9 +1423,9 @@ function renderFretes(fretesToRender) {
                             <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
                             <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
-                                <button onclick="window.viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
-                                <button onclick="window.editFrete('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
-                                <button onclick="window.deleteFrete('${f.id}')" class="action-btn delete" title="Excluir">Excluir</button>
+                                <button class="action-btn view" title="Ver detalhes">Ver</button>
+                                <button class="action-btn edit" title="Editar">Editar</button>
+                                <button class="action-btn delete" title="Excluir">Excluir</button>
                             </td>
                         </tr>
                     `}).join('')}
@@ -1591,10 +1633,5 @@ window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertShown');
 });
 
-// Log para confirmar que funções foram carregadas
-console.log('✅ Funções globais registradas:', {
-    viewFrete: typeof window.viewFrete,
-    editFrete: typeof window.editFrete,
-    deleteFrete: typeof window.deleteFrete,
-    toggleEntregue: typeof window.toggleEntregue
-});
+// Log de confirmação
+console.log('✅ Sistema carregado com Event Delegation');
