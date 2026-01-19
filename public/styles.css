@@ -1231,7 +1231,7 @@ button.small {
 }
 
 .close-modal {
-    background: none;
+    background: transparent !important;
     border: none;
     font-size: 1.5rem;
     color: var(--text-secondary);
@@ -1240,10 +1240,21 @@ button.small {
     margin: 0;
     width: 32px;
     height: 32px;
+    transition: color 0.2s ease;
 }
 
 .close-modal:hover {
     color: var(--text-primary);
+    background: transparent !important;
+}
+
+.close-modal:active {
+    background: transparent !important;
+}
+
+.close-modal:focus {
+    outline: none;
+    background: transparent !important;
 }
 
 /* SISTEMA DE ABAS */
