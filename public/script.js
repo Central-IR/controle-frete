@@ -84,53 +84,57 @@ window.handleEditClick = function(id) {
     showFormModal(String(id));
 };
 
-window.handleDeleteClick = async function(id) {
-    console.log('🗑️ Excluir frete:', id);
+window.handleDeleteClick = function(id) {
+    console.log('🗑️ Tentando excluir frete:', id);
     
-    const confirmed = await showConfirm(
-        'Tem certeza que deseja excluir este frete?',
-        {
-            title: 'Excluir Frete',
-            confirmText: 'Excluir',
-            cancelText: 'Cancelar',
-            type: 'warning'
-        }
-    );
+    // Confirmação simples primeiro
+    const confirmar = confirm('Tem certeza que deseja excluir este frete?');
     
-    if (!confirmed) return;
+    if (!confirmar) {
+        console.log('❌ Exclusão cancelada pelo usuário');
+        return;
+    }
+    
+    console.log('✅ Usuário confirmou exclusão');
     
     const idStr = String(id);
     const deletedFrete = fretes.find(f => String(f.id) === idStr);
     const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
     
+    console.log('🗑️ Deletando NF:', numeroNF);
+    
+    // Remove localmente
     fretes = fretes.filter(f => String(f.id) !== idStr);
     updateAllFilters();
     updateDashboard();
     filterFretes();
     showToast(`NF ${numeroNF} Excluído`, 'success');
     
+    // Remove no servidor
     if (isOnline || DEVELOPMENT_MODE) {
-        try {
-            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-Session-Token': sessionToken,
-                    'Accept': 'application/json'
-                },
-                mode: 'cors'
-            });
-            
-            if (!response.ok) throw new Error('Erro ao deletar');
-        } catch (error) {
-            console.error('❌ Erro ao deletar:', error);
+        fetch(`${API_URL}/fretes/${idStr}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Session-Token': sessionToken,
+                'Accept': 'application/json'
+            },
+            mode: 'cors'
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Erro ao deletar no servidor');
+            console.log('✅ Deletado no servidor com sucesso');
+        })
+        .catch(error => {
+            console.error('❌ Erro ao deletar no servidor:', error);
+            // Restaura se falhou
             if (deletedFrete) {
                 fretes.push(deletedFrete);
                 updateAllFilters();
                 updateDashboard();
                 filterFretes();
-                showToast('Erro ao excluir', 'error');
+                showToast('Erro ao excluir no servidor', 'error');
             }
-        }
+        });
     }
 };
 
