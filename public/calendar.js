@@ -1,70 +1,54 @@
 // ============================================
-// CALENDAR MODAL FUNCTIONALITY
+// CALENDÁRIO
 // ============================================
-
 let calendarYear = new Date().getFullYear();
 
-function toggleCalendar() {
+window.toggleCalendar = function() {
     const modal = document.getElementById('calendarModal');
     if (modal.classList.contains('show')) {
         modal.classList.remove('show');
     } else {
         calendarYear = currentMonth.getFullYear();
-        renderCalendar();
+        updateCalendarView();
         modal.classList.add('show');
     }
-}
+};
 
-function changeCalendarYear(direction) {
+window.changeCalendarYear = function(direction) {
     calendarYear += direction;
-    renderCalendar();
-}
+    updateCalendarView();
+};
 
-function renderCalendar() {
-    const yearElement = document.getElementById('calendarYear');
+function updateCalendarView() {
+    document.getElementById('calendarYear').textContent = calendarYear;
+    
     const monthsContainer = document.getElementById('calendarMonths');
+    const currentDate = new Date();
     
-    if (!yearElement || !monthsContainer) return;
-    
-    yearElement.textContent = calendarYear;
-    
-    const monthNames = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 
-        'Maio', 'Junho', 'Julho', 'Agosto', 
-        'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    
-    monthsContainer.innerHTML = '';
-    
-    monthNames.forEach((name, index) => {
-        const monthButton = document.createElement('div');
-        monthButton.className = 'calendar-month';
-        monthButton.textContent = name;
-        
-        // Marcar o mês atual
-        if (calendarYear === currentMonth.getFullYear() && index === currentMonth.getMonth()) {
-            monthButton.classList.add('current');
-        }
-        
-        monthButton.onclick = () => selectMonth(index);
-        monthsContainer.appendChild(monthButton);
-    });
+    monthsContainer.innerHTML = meses.map((mes, index) => {
+        const isCurrent = index === currentMonth.getMonth() && calendarYear === currentMonth.getFullYear();
+        return `
+            <div class="calendar-month ${isCurrent ? 'current' : ''}" onclick="selectMonth(${index})">
+                ${mes}
+            </div>
+        `;
+    }).join('');
 }
 
-function selectMonth(monthIndex) {
+window.selectMonth = function(monthIndex) {
     currentMonth = new Date(calendarYear, monthIndex, 1);
     updateDisplay();
     toggleCalendar();
-}
+};
 
-// Fechar o calendário ao clicar fora dele
-document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('calendarModal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('show');
-            }
-        });
+// Fechar calendário ao clicar fora
+document.addEventListener('click', (e) => {
+    const calendarModal = document.getElementById('calendarModal');
+    const calendarBtn = document.querySelector('.calendar-btn');
+    
+    if (calendarModal && calendarModal.classList.contains('show')) {
+        if (!calendarModal.contains(e.target) && !calendarBtn.contains(e.target)) {
+            toggleCalendar();
+        }
     }
 });
