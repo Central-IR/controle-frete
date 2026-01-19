@@ -1003,6 +1003,25 @@ button.small {
     border: 1px solid var(--border-color);
     transform: scale(0.9);
     animation: scaleIn 0.2s ease forwards;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.valor-total-modal {
+    overflow-y: visible;
+}
+
+.modal-content.alert-modal {
+    overflow-y: auto;
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.valor-total-modal .modal-body {
+    overflow-y: visible;
 }
 
 @keyframes scaleIn {
@@ -1014,6 +1033,8 @@ button.small {
 /* MODAL ESPECIAL PARA VALOR TOTAL */
 .valor-total-modal {
     max-width: 700px;
+    max-height: 85vh;
+    overflow-y: visible;
 }
 
 /* MODAL ESPECIAL PARA ALERTA */
@@ -1031,15 +1052,18 @@ button.small {
 }
 
 .modal-header-alert {
-    padding: 1rem 0;
+    padding: 0 0 1rem 0;
     margin-bottom: 1.5rem;
     border-bottom: none;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
 }
 
 .modal-actions-valor-total {
     display: flex;
     gap: 0.75rem;
-    justify-content: center;
+    justify-content: flex-end;
     margin-top: 1.5rem;
     padding-top: 0;
     border-top: none;
@@ -1053,7 +1077,7 @@ button.small {
 .modal-actions-alert {
     display: flex;
     gap: 0.75rem;
-    justify-content: center;
+    justify-content: flex-end;
     margin-top: 1.5rem;
     padding-top: 0;
     border-top: none;
