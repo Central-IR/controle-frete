@@ -32,78 +32,194 @@ document.addEventListener('DOMContentLoaded', () => {
         verificarAutenticacao();
     }
     
-    // Event delegation para botões da tabela
-    setupEventDelegation();
+    // Configurar event delegation APÓS o DOM carregar
+    setTimeout(setupEventDelegation, 100);
 });
 
 // ============================================
 // EVENT DELEGATION PARA BOTÕES
 // ============================================
 function setupEventDelegation() {
-    document.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
+    console.log('🔧 Configurando Event Delegation...');
+    
+    // Listener global para cliques
+    document.body.addEventListener('click', function(e) {
+        let target = e.target;
+        
+        // Se clicou em SVG ou elemento filho, busca o botão pai
+        if (!target.classList || !target.classList.contains('action-btn')) {
+            target = target.closest('button.action-btn');
+        }
+        
         if (!target) return;
         
-        // Botão Ver
-        if (target.classList.contains('action-btn') && target.classList.contains('view')) {
-            e.preventDefault();
-            const row = target.closest('tr');
-            const id = row?.dataset.id;
-            if (id) {
-                console.log('🔍 Ver clicado - ID:', id);
-                viewFreteHandler(id);
-            }
-        }
+        // Busca a linha TR
+        const row = target.closest('tr[data-id]');
+        if (!row) return;
         
-        // Botão Editar
-        if (target.classList.contains('action-btn') && target.classList.contains('edit')) {
-            e.preventDefault();
-            const row = target.closest('tr');
-            const id = row?.dataset.id;
-            if (id) {
-                console.log('✏️ Editar clicado - ID:', id);
-                editFreteHandler(id);
-            }
-        }
+        const id = row.getAttribute('data-id');
+        if (!id) return;
         
-        // Botão Excluir
-        if (target.classList.contains('action-btn') && target.classList.contains('delete')) {
-            e.preventDefault();
-            const row = target.closest('tr');
-            const id = row?.dataset.id;
-            if (id) {
-                console.log('🗑️ Excluir clicado - ID:', id);
-                deleteFreteHandler(id);
+        // Previne comportamento padrão
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('🖱️ Botão clicado:', target.className, 'ID:', id);
+        
+        // Executa ação baseado na classe
+        if (target.classList.contains('view')) {
+            handleViewClick(id);
+        } else if (target.classList.contains('edit')) {
+            handleEditClick(id);
+        } else if (target.classList.contains('delete')) {
+            handleDeleteClick(id);
+        }
+    });
+    
+    // Listener para checkboxes
+    document.body.addEventListener('change', function(e) {
+        if (e.target.type === 'checkbox' && e.target.classList.contains('styled-checkbox')) {
+            const row = e.target.closest('tr[data-id]');
+            if (row) {
+                const id = row.getAttribute('data-id');
+                handleCheckboxChange(id);
             }
         }
     });
     
-    // Event delegation para checkbox
-    document.addEventListener('change', (e) => {
-        if (e.target.classList.contains('styled-checkbox')) {
-            const row = e.target.closest('tr');
-            const id = row?.dataset.id;
-            if (id) {
-                console.log('✅ Checkbox alterado - ID:', id);
-                toggleEntregueHandler(id);
-            }
-        }
-    });
+    console.log('✅ Event Delegation configurado');
 }
 
 // ============================================
-// HANDLERS DOS BOTÕES
+// HANDLERS DE EVENTOS
 // ============================================
-function viewFreteHandler(id) {
-    const idStr = String(id);
-    const frete = fretes.find(f => String(f.id) === idStr);
+function handleViewClick(id) {
+    console.log('👁️ Visualizar frete:', id);
     
+    const frete = fretes.find(f => String(f.id) === String(id));
     if (!frete) {
-        console.error('Frete não encontrado:', id);
         showToast('Frete não encontrado!', 'error');
         return;
     }
+    
+    mostrarModalVisualizacao(frete);
+}
 
+function handleEditClick(id) {
+    console.log('✏️ Editar frete:', id);
+    
+    const frete = fretes.find(f => String(f.id) === String(id));
+    if (!frete) {
+        showToast('Frete não encontrado!', 'error');
+        return;
+    }
+    
+    window.showFormModal(String(id));
+}
+
+async function handleDeleteClick(id) {
+    console.log('🗑️ Excluir frete:', id);
+    
+    const confirmed = await showConfirm(
+        'Tem certeza que deseja excluir este frete?',
+        {
+            title: 'Excluir Frete',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar',
+            type: 'warning'
+        }
+    );
+    
+    if (!confirmed) return;
+    
+    const idStr = String(id);
+    const deletedFrete = fretes.find(f => String(f.id) === idStr);
+    const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
+    
+    fretes = fretes.filter(f => String(f.id) !== idStr);
+    updateAllFilters();
+    updateDashboard();
+    filterFretes();
+    showToast(`NF ${numeroNF} Excluído`, 'success');
+    
+    if (isOnline || DEVELOPMENT_MODE) {
+        try {
+            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Session-Token': sessionToken,
+                    'Accept': 'application/json'
+                },
+                mode: 'cors'
+            });
+            
+            if (!response.ok) throw new Error('Erro ao deletar');
+        } catch (error) {
+            console.error('❌ Erro ao deletar:', error);
+            if (deletedFrete) {
+                fretes.push(deletedFrete);
+                updateAllFilters();
+                updateDashboard();
+                filterFretes();
+                showToast('Erro ao excluir', 'error');
+            }
+        }
+    }
+}
+
+async function handleCheckboxChange(id) {
+    console.log('☑️ Checkbox alterado:', id);
+    
+    const idStr = String(id);
+    const frete = fretes.find(f => String(f.id) === idStr);
+    
+    if (!frete) return;
+    
+    const tiposPermitidos = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
+    const tipoNf = frete.tipo_nf || 'ENVIO';
+    
+    if (!tiposPermitidos.includes(tipoNf)) return;
+    
+    const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
+    
+    if (isOnline || DEVELOPMENT_MODE) {
+        try {
+            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ status: novoStatus }),
+                mode: 'cors'
+            });
+            
+            if (!response.ok) throw new Error('Erro ao atualizar');
+            
+            const savedData = await response.json();
+            const index = fretes.findIndex(f => String(f.id) === idStr);
+            if (index !== -1) {
+                fretes[index] = savedData;
+                
+                if (novoStatus === 'ENTREGUE') {
+                    showToast(`NF ${savedData.numero_nf} Entregue`, 'success');
+                }
+                
+                updateDashboard();
+                filterFretes();
+            }
+        } catch (error) {
+            console.error('❌ Erro ao atualizar status:', error);
+            showToast('Erro ao atualizar status', 'error');
+        }
+    }
+}
+
+// ============================================
+// MODAL DE VISUALIZAÇÃO
+// ============================================
+function mostrarModalVisualizacao(frete) {
     let observacoesArray = [];
     if (frete.observacoes) {
         try {
@@ -132,7 +248,7 @@ function viewFreteHandler(id) {
     };
 
     const modalHTML = `
-        <div class="modal-overlay" id="viewModal">
+        <div class="modal-overlay" id="viewModal" style="display: flex;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">Detalhes do Frete</h3>
@@ -196,132 +312,29 @@ function viewFreteHandler(id) {
         </div>
     `;
 
+    const existingModal = document.getElementById('viewModal');
+    if (existingModal) existingModal.remove();
+    
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-function editFreteHandler(id) {
-    const idStr = String(id);
-    const frete = fretes.find(f => String(f.id) === idStr);
-    
-    if (!frete) {
-        console.error('Frete não encontrado:', id);
-        showToast('Frete não encontrado!', 'error');
-        return;
+window.closeViewModal = function() {
+    const modal = document.getElementById('viewModal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease forwards';
+        setTimeout(() => modal.remove(), 200);
     }
+};
+
+window.switchViewTab = function(index) {
+    document.querySelectorAll('#viewModal .tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+    });
     
-    console.log('Abrindo modal de edição para:', frete);
-    window.showFormModal(idStr);
-}
-
-async function deleteFreteHandler(id) {
-    console.log('deleteFreteHandler chamado com ID:', id);
-    
-    const confirmed = await showConfirm(
-        'Tem certeza que deseja excluir este frete?',
-        {
-            title: 'Excluir Frete',
-            confirmText: 'Excluir',
-            cancelText: 'Cancelar',
-            type: 'warning'
-        }
-    );
-
-    if (!confirmed) {
-        console.log('Exclusão cancelada pelo usuário');
-        return;
-    }
-
-    const idStr = String(id);
-    const deletedFrete = fretes.find(f => String(f.id) === idStr);
-    const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
-    
-    fretes = fretes.filter(f => String(f.id) !== idStr);
-    updateAllFilters();
-    updateDashboard();
-    filterFretes();
-    showToast(`NF ${numeroNF} Excluído`, 'success');
-
-    if (isOnline || DEVELOPMENT_MODE) {
-        try {
-            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-Session-Token': sessionToken,
-                    'Accept': 'application/json'
-                },
-                mode: 'cors'
-            });
-
-            if (!response.ok) throw new Error('Erro ao deletar');
-        } catch (error) {
-            console.error('❌ Erro ao deletar:', error);
-            if (deletedFrete) {
-                fretes.push(deletedFrete);
-                updateAllFilters();
-                updateDashboard();
-                filterFretes();
-                showToast('Erro ao excluir', 'error');
-            }
-        }
-    }
-}
-
-async function toggleEntregueHandler(id) {
-    console.log('toggleEntregueHandler chamado com ID:', id);
-    
-    const idStr = String(id);
-    const frete = fretes.find(f => String(f.id) === idStr);
-    
-    if (!frete) {
-        console.error('Frete não encontrado:', id);
-        return;
-    }
-    
-    const tiposPermitidos = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
-    const tipoNf = frete.tipo_nf || 'ENVIO';
-    
-    if (!tiposPermitidos.includes(tipoNf)) {
-        console.log('Tipo de NF não permite alteração de status:', tipoNf);
-        return;
-    }
-
-    const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
-    console.log('Alterando status de', frete.status, 'para', novoStatus);
-
-    if (isOnline || DEVELOPMENT_MODE) {
-        try {
-            const response = await fetch(`${API_URL}/fretes/${idStr}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-Token': sessionToken,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ status: novoStatus }),
-                mode: 'cors'
-            });
-
-            if (!response.ok) throw new Error('Erro ao atualizar');
-
-            const savedData = await response.json();
-            const index = fretes.findIndex(f => String(f.id) === idStr);
-            if (index !== -1) {
-                fretes[index] = savedData;
-                
-                if (novoStatus === 'ENTREGUE') {
-                    showToast(`NF ${savedData.numero_nf} Entregue`, 'success');
-                }
-                
-                updateDashboard();
-                filterFretes();
-            }
-
-        } catch (error) {
-            console.error('❌ Erro ao atualizar status:', error);
-            showToast('Erro ao atualizar status', 'error');
-        }
-    }
-}
+    document.querySelectorAll('#viewModal .tab-content').forEach((content, i) => {
+        content.classList.toggle('active', i === index);
+    });
+};
 
 // ============================================
 // AUTENTICAÇÃO
@@ -1071,24 +1084,6 @@ window.switchFormTab = function(index) {
     });
 };
 
-window.switchViewTab = function(index) {
-    document.querySelectorAll('#viewModal .tab-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
-    });
-    
-    document.querySelectorAll('#viewModal .tab-content').forEach((content, i) => {
-        content.classList.toggle('active', i === index);
-    });
-};
-
-window.closeViewModal = function() {
-    const modal = document.getElementById('viewModal');
-    if (modal) {
-        modal.style.animation = 'fadeOut 0.2s ease forwards';
-        setTimeout(() => modal.remove(), 200);
-    }
-};
-
 // ============================================
 // SUBMIT
 // ============================================
@@ -1357,7 +1352,7 @@ function filterFretes() {
 }
 
 // ============================================
-// RENDERIZAÇÃO COM EVENT DELEGATION
+// RENDERIZAÇÃO COM DATA-ID
 // ============================================
 function renderFretes(fretesToRender) {
     const container = document.getElementById('fretesContainer');
@@ -1633,5 +1628,9 @@ window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertShown');
 });
 
-// Log de confirmação
-console.log('✅ Sistema carregado com Event Delegation');
+// ============================================
+// LOG FINAL
+// ============================================
+console.log('✅ Script completo carregado com sucesso!');
+console.log('🔧 Event Delegation configurado');
+console.log('📋 Pronto para uso!');
