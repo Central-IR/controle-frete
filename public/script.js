@@ -882,19 +882,26 @@ async function handleSubmit(event) {
 // TOGGLE ENTREGUE (CHECKBOX)
 // ============================================
 window.toggleEntregue = async function(id) {
+    console.log('toggleEntregue chamado com ID:', id);
+    
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
-    if (!frete) return;
+    if (!frete) {
+        console.error('Frete não encontrado:', id);
+        return;
+    }
     
     const tiposPermitidos = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
     const tipoNf = frete.tipo_nf || 'ENVIO';
     
     if (!tiposPermitidos.includes(tipoNf)) {
+        console.log('Tipo de NF não permite alteração de status:', tipoNf);
         return;
     }
 
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
+    console.log('Alterando status de', frete.status, 'para', novoStatus);
 
     if (isOnline || DEVELOPMENT_MODE) {
         try {
@@ -932,24 +939,30 @@ window.toggleEntregue = async function(id) {
 };
 
 // ============================================
-// EDIÇÃO
+// EDIÇÃO - CORRIGIDO
 // ============================================
 window.editFrete = function(id) {
+    console.log('editFrete chamado com ID:', id);
+    
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
     if (!frete) {
+        console.error('Frete não encontrado:', id);
         showToast('Frete não encontrado!', 'error');
         return;
     }
     
+    console.log('Abrindo modal de edição para:', frete);
     window.showFormModal(idStr);
 };
 
 // ============================================
-// EXCLUSÃO
+// EXCLUSÃO - CORRIGIDO
 // ============================================
 window.deleteFrete = async function(id) {
+    console.log('deleteFrete chamado com ID:', id);
+    
     const confirmed = await showConfirm(
         'Tem certeza que deseja excluir este frete?',
         {
@@ -960,7 +973,10 @@ window.deleteFrete = async function(id) {
         }
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+        console.log('Exclusão cancelada pelo usuário');
+        return;
+    }
 
     const idStr = String(id);
     const deletedFrete = fretes.find(f => String(f.id) === idStr);
@@ -985,6 +1001,7 @@ window.deleteFrete = async function(id) {
 
             if (!response.ok) throw new Error('Erro ao deletar');
         } catch (error) {
+            console.error('❌ Erro ao deletar:', error);
             if (deletedFrete) {
                 fretes.push(deletedFrete);
                 updateAllFilters();
@@ -997,13 +1014,16 @@ window.deleteFrete = async function(id) {
 };
 
 // ============================================
-// VISUALIZAÇÃO
+// VISUALIZAÇÃO - CORRIGIDO
 // ============================================
 window.viewFrete = function(id) {
+    console.log('viewFrete chamado com ID:', id);
+    
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
     if (!frete) {
+        console.error('Frete não encontrado:', id);
         showToast('Frete não encontrado!', 'error');
         return;
     }
@@ -1294,7 +1314,7 @@ function filterFretes() {
 }
 
 // ============================================
-// RENDERIZAÇÃO
+// RENDERIZAÇÃO - CORRIGIDA COM DATA-ID
 // ============================================
 function renderFretes(fretesToRender) {
     const container = document.getElementById('fretesContainer');
@@ -1338,7 +1358,7 @@ function renderFretes(fretesToRender) {
                         };
                         
                         return `
-                        <tr class="${isEntregue ? 'row-entregue' : ''}">
+                        <tr class="${isEntregue ? 'row-entregue' : ''}" data-id="${f.id}">
                             <td style="text-align: center; padding: 8px;">
                                 ${showCheckbox ? `
                                 <div class="checkbox-wrapper">
@@ -1346,7 +1366,7 @@ function renderFretes(fretesToRender) {
                                         type="checkbox" 
                                         id="check-${f.id}"
                                         ${isEntregue ? 'checked' : ''}
-                                        onchange="toggleEntregue('${f.id}')"
+                                        onchange="window.toggleEntregue('${f.id}')"
                                         class="styled-checkbox"
                                     >
                                     <label for="check-${f.id}" class="checkbox-label-styled"></label>
@@ -1361,9 +1381,9 @@ function renderFretes(fretesToRender) {
                             <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
                             <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
-                                <button onclick="viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
-                                <button onclick="editFrete('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
-                                <button onclick="deleteFrete('${f.id}')" class="action-btn delete" title="Excluir">Excluir</button>
+                                <button onclick="window.viewFrete('${f.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
+                                <button onclick="window.editFrete('${f.id}')" class="action-btn edit" title="Editar">Editar</button>
+                                <button onclick="window.deleteFrete('${f.id}')" class="action-btn delete" title="Excluir">Excluir</button>
                             </td>
                         </tr>
                     `}).join('')}
@@ -1569,4 +1589,12 @@ window.closeAlertModal = function() {
 
 window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertShown');
+});
+
+// Log para confirmar que funções foram carregadas
+console.log('✅ Funções globais registradas:', {
+    viewFrete: typeof window.viewFrete,
+    editFrete: typeof window.editFrete,
+    deleteFrete: typeof window.deleteFrete,
+    toggleEntregue: typeof window.toggleEntregue
 });
