@@ -48,10 +48,10 @@
                 </div>
                 <div class="stat-card stat-card-danger" id="cardForaPrazo" onclick="showAlertModal()" style="cursor: pointer;" title="Clique para ver detalhes">
                     <div class="stat-icon stat-icon-danger">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                            <line x1="12" y1="9" x2="12" y2="13"></line>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
                         </svg>
                     </div>
                     <div class="stat-content">
@@ -216,8 +216,8 @@
 
     <!-- MODAL VALOR TOTAL POR MÊS -->
     <div class="modal-overlay" id="valorTotalModal" style="display: none;">
-        <div class="modal-content alert-modal">
-            <div class="modal-header">
+        <div class="modal-content valor-total-modal">
+            <div class="modal-header-valor-total">
                 <h3 class="modal-title">Valores Mensais - 2026</h3>
                 <button class="close-modal" onclick="closeValorTotalModal()">✕</button>
             </div>
@@ -225,7 +225,7 @@
             <div class="modal-body" id="valorTotalModalBody"></div>
 
             <div class="modal-actions">
-                <button type="button" onclick="closeValorTotalModal()" class="btn-primary">Fechar</button>
+                <button type="button" onclick="closeValorTotalModal()" class="btn-close-red">Fechar</button>
             </div>
         </div>
     </div>
