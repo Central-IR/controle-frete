@@ -42,47 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventDelegation() {
     console.log('🔧 Configurando Event Delegation...');
     
-    // Listener global para cliques
-    document.body.addEventListener('click', function(e) {
-        let target = e.target;
-        
-        // Se clicou em SVG ou elemento filho, busca o botão pai
-        if (!target.classList || !target.classList.contains('action-btn')) {
-            target = target.closest('button.action-btn');
-        }
-        
-        if (!target) return;
-        
-        // Busca a linha TR
-        const row = target.closest('tr[data-id]');
-        if (!row) return;
-        
-        const id = row.getAttribute('data-id');
-        if (!id) return;
-        
-        // Previne comportamento padrão
-        e.preventDefault();
-        e.stopPropagation();
-        
-        console.log('🖱️ Botão clicado:', target.className, 'ID:', id);
-        
-        // Executa ação baseado na classe
-        if (target.classList.contains('view')) {
-            handleViewClick(id);
-        } else if (target.classList.contains('edit')) {
-            handleEditClick(id);
-        } else if (target.classList.contains('delete')) {
-            handleDeleteClick(id);
-        }
-    });
-    
-    // Listener para checkboxes
+    // Listener para checkboxes via event delegation
     document.body.addEventListener('change', function(e) {
         if (e.target.type === 'checkbox' && e.target.classList.contains('styled-checkbox')) {
             const row = e.target.closest('tr[data-id]');
             if (row) {
                 const id = row.getAttribute('data-id');
-                handleCheckboxChange(id);
+                console.log('☑️ Checkbox alterado via delegation - ID:', id);
+                window.handleCheckboxChange(id);
             }
         }
     });
@@ -91,9 +58,9 @@ function setupEventDelegation() {
 }
 
 // ============================================
-// HANDLERS DE EVENTOS
+// HANDLERS DE EVENTOS (EXPOSTOS GLOBALMENTE)
 // ============================================
-function handleViewClick(id) {
+window.handleViewClick = function(id) {
     console.log('👁️ Visualizar frete:', id);
     
     const frete = fretes.find(f => String(f.id) === String(id));
@@ -103,9 +70,9 @@ function handleViewClick(id) {
     }
     
     mostrarModalVisualizacao(frete);
-}
+};
 
-function handleEditClick(id) {
+window.handleEditClick = function(id) {
     console.log('✏️ Editar frete:', id);
     
     const frete = fretes.find(f => String(f.id) === String(id));
@@ -115,9 +82,9 @@ function handleEditClick(id) {
     }
     
     window.showFormModal(String(id));
-}
+};
 
-async function handleDeleteClick(id) {
+window.handleDeleteClick = async function(id) {
     console.log('🗑️ Excluir frete:', id);
     
     const confirmed = await showConfirm(
@@ -165,9 +132,9 @@ async function handleDeleteClick(id) {
             }
         }
     }
-}
+};
 
-async function handleCheckboxChange(id) {
+window.handleCheckboxChange = async function(id) {
     console.log('☑️ Checkbox alterado:', id);
     
     const idStr = String(id);
@@ -214,7 +181,7 @@ async function handleCheckboxChange(id) {
             showToast('Erro ao atualizar status', 'error');
         }
     }
-}
+};
 
 // ============================================
 // MODAL DE VISUALIZAÇÃO
@@ -1352,7 +1319,7 @@ function filterFretes() {
 }
 
 // ============================================
-// RENDERIZAÇÃO COM DATA-ID
+// RENDERIZAÇÃO COM ONCLICK INLINE
 // ============================================
 function renderFretes(fretesToRender) {
     const container = document.getElementById('fretesContainer');
@@ -1418,9 +1385,9 @@ function renderFretes(fretesToRender) {
                             <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
                             <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
-                                <button class="action-btn view" title="Ver detalhes">Ver</button>
-                                <button class="action-btn edit" title="Editar">Editar</button>
-                                <button class="action-btn delete" title="Excluir">Excluir</button>
+                                <button class="action-btn view" onclick="handleViewClick('${f.id}')" title="Ver detalhes">Ver</button>
+                                <button class="action-btn edit" onclick="handleEditClick('${f.id}')" title="Editar">Editar</button>
+                                <button class="action-btn delete" onclick="handleDeleteClick('${f.id}')" title="Excluir">Excluir</button>
                             </td>
                         </tr>
                     `}).join('')}
