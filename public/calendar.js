@@ -1,5 +1,5 @@
 // ============================================
-// CALENDÁRIO
+// CALENDARIO
 // ============================================
 let calendarYear = new Date().getFullYear();
 
@@ -41,7 +41,7 @@ window.selectMonth = function(monthIndex) {
     toggleCalendar();
 };
 
-// Fechar calendário ao clicar fora
+// Fechar calendario ao clicar fora
 document.addEventListener('click', (e) => {
     const calendarModal = document.getElementById('calendarModal');
     const calendarBtn = document.querySelector('.calendar-btn');
