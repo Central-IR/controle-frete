@@ -752,7 +752,7 @@ window.handleTipoNfChange = function() {
     // Placeholder para futura expansão
 };
 
-function closeFormModal(showCancelMessage = false) {
+window.closeFormModal = function(showCancelMessage = false) {
     const modal = document.getElementById('formModal');
     if (modal) {
         const editId = document.getElementById('editId')?.value;
@@ -765,7 +765,7 @@ function closeFormModal(showCancelMessage = false) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
         setTimeout(() => modal.remove(), 200);
     }
-}
+};
 
 // ============================================
 // SISTEMA DE ABAS
@@ -1103,13 +1103,13 @@ window.viewFrete = function(id) {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 };
 
-function closeViewModal() {
+window.closeViewModal = function() {
     const modal = document.getElementById('viewModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
         setTimeout(() => modal.remove(), 200);
     }
-}
+};
 
 window.switchViewTab = function(index) {
     document.querySelectorAll('#viewModal .tab-btn').forEach((btn, i) => {
@@ -1569,4 +1569,40 @@ window.closeAlertModal = function() {
 
 window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertShown');
+});
+
+// ============================================
+// FECHAR MODAIS CLICANDO FORA
+// ============================================
+document.addEventListener('click', (e) => {
+    // Modal de Alerta (Fora do Prazo)
+    const alertModal = document.getElementById('alertModal');
+    if (alertModal && alertModal.style.display === 'flex') {
+        if (e.target === alertModal) {
+            closeAlertModal();
+        }
+    }
+    
+    // Modal de Valor Total
+    const valorTotalModal = document.getElementById('valorTotalModal');
+    if (valorTotalModal && valorTotalModal.style.display === 'flex') {
+        if (e.target === valorTotalModal) {
+            closeValorTotalModal();
+        }
+    }
+    
+    // Modal de Formulário
+    const formModal = document.getElementById('formModal');
+    if (formModal && e.target === formModal) {
+        const confirmed = confirm('Deseja realmente cancelar? As alterações não salvas serão perdidas.');
+        if (confirmed) {
+            closeFormModal(false);
+        }
+    }
+    
+    // Modal de Visualização
+    const viewModal = document.getElementById('viewModal');
+    if (viewModal && e.target === viewModal) {
+        closeViewModal();
+    }
 });
