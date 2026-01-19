@@ -81,7 +81,7 @@ window.handleEditClick = function(id) {
         return;
     }
     
-    window.showFormModal(String(id));
+    showFormModal(String(id));
 };
 
 window.handleDeleteClick = async function(id) {
@@ -750,13 +750,16 @@ function showConfirm(message, options = {}) {
 }
 
 // ============================================
-// FORMULÁRIO COM OBSERVAÇÕES
+// FORMULÁRIO COM OBSERVAÇÕES - CORRIGIDO
 // ============================================
 window.toggleForm = function() {
-    window.showFormModal(null);
+    console.log('🆕 Abrindo formulário para novo frete');
+    showFormModal(null);
 };
 
-window.showFormModal = function(editingId = null) {
+function showFormModal(editingId = null) {
+    console.log('📝 showFormModal chamada com ID:', editingId);
+    
     const isEditing = editingId !== null;
     let frete = null;
     
@@ -768,6 +771,9 @@ window.showFormModal = function(editingId = null) {
             showToast('Frete não encontrado!', 'error');
             return;
         }
+        console.log('✏️ Editando frete:', frete);
+    } else {
+        console.log('🆕 Criando novo frete');
     }
 
     let observacoesArray = [];
@@ -799,7 +805,7 @@ window.showFormModal = function(editingId = null) {
         : '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 2rem;">Nenhuma observação registrada</p>';
 
     const modalHTML = `
-        <div class="modal-overlay" id="formModal">
+        <div class="modal-overlay" id="formModal" style="display: flex;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">${isEditing ? 'Editar Frete' : 'Novo Frete'}</h3>
@@ -937,6 +943,12 @@ window.showFormModal = function(editingId = null) {
         </div>
     `;
 
+    // Remove modal existente se houver
+    const existingModal = document.getElementById('formModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
     const camposMaiusculas = ['numero_nf', 'documento', 'nome_orgao', 'contato_orgao', 'cidade_destino'];
@@ -953,7 +965,12 @@ window.showFormModal = function(editingId = null) {
     });
     
     setTimeout(() => document.getElementById('numero_nf')?.focus(), 100);
+    
+    console.log('✅ Modal de formulário criado e exibido');
 }
+
+// Exporta a função para o escopo global
+window.showFormModal = showFormModal;
 
 // ============================================
 // FUNÇÕES DE OBSERVAÇÕES
@@ -1599,170 +1616,8 @@ window.addEventListener('beforeunload', () => {
 // LOG FINAL
 // ============================================
 console.log('✅ Script completo carregado com sucesso!');
-console.log('🔧 Event Delegation configurado');
-console.log('📋 Pronto para uso!');
-
-console.log('🔧 Aplicando correção dos botões...');
-
-// Remove event listeners antigos e recria
-document.body.removeEventListener('click', handleBodyClick);
-
-// Novo handler global com debug
-function handleBodyClick(e) {
-    const target = e.target;
-    console.log('🖱️ Click em:', target.tagName, target.className);
-    
-    // Verifica se é ou está dentro de um botão action-btn
-    let button = null;
-    
-    if (target.classList && target.classList.contains('action-btn')) {
-        button = target;
-    } else if (target.closest) {
-        button = target.closest('button.action-btn');
-    }
-    
-    if (!button) {
-        console.log('❌ Não é um action-btn');
-        return;
-    }
-    
-    console.log('✅ Botão action-btn detectado:', button.className);
-    
-    // Busca a linha TR
-    const row = button.closest('tr[data-id]');
-    if (!row) {
-        console.error('❌ TR com data-id não encontrada');
-        return;
-    }
-    
-    const id = row.getAttribute('data-id');
-    console.log('📋 ID capturado:', id);
-    
-    if (!id) {
-        console.error('❌ ID vazio');
-        return;
-    }
-    
-    // Previne comportamento padrão
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Executa ação baseado na classe
-    if (button.classList.contains('view')) {
-        console.log('👁️ EXECUTANDO VIEW');
-        executarView(id);
-    } else if (button.classList.contains('edit')) {
-        console.log('✏️ EXECUTANDO EDIT');
-        executarEdit(id);
-    } else if (button.classList.contains('delete')) {
-        console.log('🗑️ EXECUTANDO DELETE');
-        executarDelete(id);
-    }
-}
-
-// Funções de execução simplificadas e robustas
-function executarView(id) {
-    try {
-        console.log('Executando VIEW para ID:', id);
-        const frete = fretes.find(f => String(f.id) === String(id));
-        if (!frete) {
-            alert('Frete não encontrado!');
-            return;
-        }
-        mostrarModalVisualizacao(frete);
-    } catch (error) {
-        console.error('Erro em executarView:', error);
-        alert('Erro ao visualizar: ' + error.message);
-    }
-}
-
-function executarEdit(id) {
-    try {
-        console.log('Executando EDIT para ID:', id);
-        const frete = fretes.find(f => String(f.id) === String(id));
-        if (!frete) {
-            alert('Frete não encontrado!');
-            return;
-        }
-        
-        // Verifica se showFormModal existe
-        if (typeof window.showFormModal !== 'function') {
-            console.error('showFormModal não encontrada!');
-            alert('Erro: Função de edição não disponível');
-            return;
-        }
-        
-        console.log('Chamando showFormModal...');
-        window.showFormModal(String(id));
-    } catch (error) {
-        console.error('Erro em executarEdit:', error);
-        alert('Erro ao editar: ' + error.message);
-    }
-}
-
-async function executarDelete(id) {
-    try {
-        console.log('Executando DELETE para ID:', id);
-        
-        // Confirmação simples primeiro
-        const confirmar = confirm('Tem certeza que deseja excluir este frete?');
-        if (!confirmar) {
-            console.log('Exclusão cancelada');
-            return;
-        }
-        
-        const idStr = String(id);
-        const deletedFrete = fretes.find(f => String(f.id) === idStr);
-        const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
-        
-        // Remove localmente
-        fretes = fretes.filter(f => String(f.id) !== idStr);
-        updateAllFilters();
-        updateDashboard();
-        filterFretes();
-        showToast(`NF ${numeroNF} Excluído`, 'success');
-        
-        // Remove no servidor
-        if (isOnline || DEVELOPMENT_MODE) {
-            try {
-                const response = await fetch(`${API_URL}/fretes/${idStr}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-Session-Token': sessionToken,
-                        'Accept': 'application/json'
-                    },
-                    mode: 'cors'
-                });
-                
-                if (!response.ok) throw new Error('Erro ao deletar no servidor');
-                console.log('✅ Deletado no servidor');
-            } catch (error) {
-                console.error('❌ Erro ao deletar no servidor:', error);
-                // Restaura se falhou
-                if (deletedFrete) {
-                    fretes.push(deletedFrete);
-                    updateAllFilters();
-                    updateDashboard();
-                    filterFretes();
-                    showToast('Erro ao excluir no servidor', 'error');
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Erro em executarDelete:', error);
-        alert('Erro ao excluir: ' + error.message);
-    }
-}
-
-// Adiciona o listener
-document.body.addEventListener('click', handleBodyClick);
-
-console.log('✅ Correção dos botões aplicada!');
-console.log('🧪 Testando funções:');
-console.log('  - showFormModal:', typeof window.showFormModal);
-console.log('  - showConfirm:', typeof showConfirm);
-console.log('  - fretes:', Array.isArray(fretes) ? fretes.length + ' itens' : 'indefinido');
-
-// ============================================
-// FIM DA CORREÇÃO
-// ============================================
+console.log('🔧 Funções exportadas para window:', {
+    toggleForm: typeof window.toggleForm,
+    showFormModal: typeof window.showFormModal,
+    handleEditClick: typeof window.handleEditClick
+});
