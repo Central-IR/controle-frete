@@ -485,10 +485,10 @@ function showConfirm(message, options = {}) {
 // FORMULÁRIO COM OBSERVAÇÕES
 // ============================================
 window.toggleForm = function() {
-    showFormModal(null);
+    window.showFormModal(null);
 };
 
-function showFormModal(editingId = null) {
+window.showFormModal = function(editingId = null) {
     const isEditing = editingId !== null;
     let frete = null;
     
@@ -943,7 +943,7 @@ window.editFrete = function(id) {
         return;
     }
     
-    showFormModal(idStr);
+    window.showFormModal(idStr);
 };
 
 // ============================================
@@ -1569,40 +1569,4 @@ window.closeAlertModal = function() {
 
 window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertShown');
-});
-
-// ============================================
-// FECHAR MODAIS CLICANDO FORA
-// ============================================
-document.addEventListener('click', (e) => {
-    // Modal de Alerta (Fora do Prazo)
-    const alertModal = document.getElementById('alertModal');
-    if (alertModal && alertModal.style.display === 'flex') {
-        if (e.target === alertModal) {
-            closeAlertModal();
-        }
-    }
-    
-    // Modal de Valor Total
-    const valorTotalModal = document.getElementById('valorTotalModal');
-    if (valorTotalModal && valorTotalModal.style.display === 'flex') {
-        if (e.target === valorTotalModal) {
-            closeValorTotalModal();
-        }
-    }
-    
-    // Modal de Formulário
-    const formModal = document.getElementById('formModal');
-    if (formModal && e.target === formModal) {
-        const confirmed = confirm('Deseja realmente cancelar? As alterações não salvas serão perdidas.');
-        if (confirmed) {
-            closeFormModal(false);
-        }
-    }
-    
-    // Modal de Visualização
-    const viewModal = document.getElementById('viewModal');
-    if (viewModal && e.target === viewModal) {
-        closeViewModal();
-    }
 });
