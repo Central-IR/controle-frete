@@ -1,7 +1,7 @@
 // ============================================
 // CONFIGURAÇÃO
 // ============================================
-const DEVELOPMENT_MODE = true; // MODO DESENVOLVIMENTO ATIVADO
+const DEVELOPMENT_MODE = false;
 const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
 const API_URL = 'https://controle-frete.onrender.com/api';
 
@@ -24,7 +24,6 @@ console.log('🔧 Modo desenvolvimento:', DEVELOPMENT_MODE);
 // INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM carregado, inicializando aplicação...');
     if (DEVELOPMENT_MODE) {
         console.log('⚠️ MODO DESENVOLVIMENTO ATIVADO');
         sessionToken = 'dev-mode';
@@ -68,7 +67,6 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
 }
 
 function inicializarApp() {
-    console.log('Inicializando aplicação...');
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             inicializarApp();
@@ -80,8 +78,6 @@ function inicializarApp() {
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
     startPolling();
-    
-    console.log('✅ Aplicação inicializada com sucesso');
 }
 
 // ============================================
@@ -236,7 +232,6 @@ function updateDisplay() {
 }
 
 window.changeMonth = function(direction) {
-    console.log('Mudando mês:', direction);
     currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1);
     updateDisplay();
 };
@@ -327,7 +322,6 @@ function updateDashboard() {
 // MODAL VALOR TOTAL POR MÊS - VERSÃO SIMPLIFICADA 6+6
 // ============================================
 window.showValorTotalModal = function() {
-    console.log('Abrindo modal de valor total...');
     const anoAtual = currentMonth.getFullYear();
     const mesesAno = [];
     
@@ -356,6 +350,7 @@ window.showValorTotalModal = function() {
     const modalBody = document.getElementById('valorTotalModalBody');
     if (!modalBody) return;
     
+    // Função para gerar card de mês
     const gerarCard = (m, idx) => {
         let freteTrend = '';
         let valorTrend = '';
@@ -399,6 +394,7 @@ window.showValorTotalModal = function() {
         `;
     };
     
+    // Dividir em dois grupos: 6 primeiros e 6 últimos
     const primeirosSeisMeses = mesesAno.slice(0, 6);
     const ultimosSeisMeses = mesesAno.slice(6, 12);
     
@@ -489,12 +485,10 @@ function showConfirm(message, options = {}) {
 // FORMULÁRIO COM OBSERVAÇÕES
 // ============================================
 window.toggleForm = function() {
-    console.log('Abrindo formulário de novo frete...');
     window.showFormModal(null);
 };
 
 window.showFormModal = function(editingId = null) {
-    console.log('Exibindo modal de formulário. Editando ID:', editingId);
     const isEditing = editingId !== null;
     let frete = null;
     
@@ -795,8 +789,6 @@ window.switchFormTab = function(index) {
 async function handleSubmit(event) {
     if (event) event.preventDefault();
 
-    console.log('Salvando frete...');
-
     const observacoesField = document.getElementById('observacoesData');
     const observacoesValue = observacoesField ? observacoesField.value : '[]';
 
@@ -890,7 +882,6 @@ async function handleSubmit(event) {
 // TOGGLE ENTREGUE (CHECKBOX)
 // ============================================
 window.toggleEntregue = async function(id) {
-    console.log('Toggle entregue para ID:', id);
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
@@ -944,7 +935,6 @@ window.toggleEntregue = async function(id) {
 // EDIÇÃO
 // ============================================
 window.editFrete = function(id) {
-    console.log('Editando frete ID:', id);
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
@@ -960,8 +950,6 @@ window.editFrete = function(id) {
 // EXCLUSÃO
 // ============================================
 window.deleteFrete = async function(id) {
-    console.log('Excluindo frete ID:', id);
-    
     const confirmed = await showConfirm(
         'Tem certeza que deseja excluir este frete?',
         {
@@ -1012,7 +1000,6 @@ window.deleteFrete = async function(id) {
 // VISUALIZAÇÃO
 // ============================================
 window.viewFrete = function(id) {
-    console.log('Visualizando frete ID:', id);
     const idStr = String(id);
     const frete = fretes.find(f => String(f.id) === idStr);
     
@@ -1504,7 +1491,6 @@ function verificarNotasAtrasadas() {
 // MODAL DE ALERTA FORA DO PRAZO
 // ============================================
 window.showAlertModal = function() {
-    console.log('Abrindo modal de alertas...');
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
@@ -1584,5 +1570,3 @@ window.closeAlertModal = function() {
 window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertShown');
 });
-
-console.log('✅ Script.js carregado completamente');
