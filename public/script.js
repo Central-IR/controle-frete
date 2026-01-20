@@ -761,7 +761,8 @@ window.toggleForm = function() {
     showFormModal(null);
 };
 
-function showFormModal(editingId = null) {
+// FUNÇÃO PRINCIPAL SHOWFORMMODAL - EXPOSTA GLOBALMENTE NO INÍCIO
+window.showFormModal = function(editingId = null) {
     console.log('📝 showFormModal chamada com ID:', editingId);
     
     const isEditing = editingId !== null;
@@ -895,7 +896,7 @@ function showFormModal(editingId = null) {
                                         <option value="MOVVI" ${frete?.transportadora === 'MOVVI' ? 'selected' : ''}>MOVVI</option>
                                         <option value="TG TRANSPORTES" ${frete?.transportadora === 'TG TRANSPORTES' ? 'selected' : ''}>TG TRANSPORTES</option>
                                         <option value="BROSLOG" ${frete?.transportadora === 'BROSLOG' ? 'selected' : ''}>BROSLOG</option>
-                                        <option value="FAVORITA" ${cotacao.transportadora === 'FAVORITA' ? 'selected' : ''}>FAVORITA</option>
+                                        <option value="FAVORITA" ${frete?.transportadora === 'FAVORITA' ? 'selected' : ''}>FAVORITA</option>
                                         <option value="ENTREGA PRÓPRIA" ${frete?.transportadora === 'ENTREGA PRÓPRIA' ? 'selected' : ''}>ENTREGA PRÓPRIA</option>
                                         <option value="DIRETO PELO FORNECEDOR" ${frete?.transportadora === 'DIRETO PELO FORNECEDOR' ? 'selected' : ''}>DIRETO PELO FORNECEDOR</option>
                                     </select>
@@ -973,10 +974,7 @@ function showFormModal(editingId = null) {
     setTimeout(() => document.getElementById('numero_nf')?.focus(), 100);
     
     console.log('✅ Modal de formulário criado e exibido');
-}
-
-// Exporta a função para o escopo global
-window.showFormModal = showFormModal;
+};
 
 // ============================================
 // FUNÇÕES DE OBSERVAÇÕES
@@ -1075,9 +1073,9 @@ window.switchFormTab = function(index) {
 };
 
 // ============================================
-// SUBMIT
+// SUBMIT - EXPOSTO GLOBALMENTE
 // ============================================
-async function handleSubmit(event) {
+window.handleSubmit = async function(event) {
     if (event) event.preventDefault();
 
     const observacoesField = document.getElementById('observacoesData');
@@ -1167,7 +1165,7 @@ async function handleSubmit(event) {
         showToast(`Erro: ${error.message}`, 'error');
         closeFormModal();
     }
-}
+};
 
 // ============================================
 // FILTROS - ATUALIZAÇÃO DINÂMICA
@@ -1625,5 +1623,6 @@ console.log('✅ Script completo carregado com sucesso!');
 console.log('🔧 Funções exportadas para window:', {
     toggleForm: typeof window.toggleForm,
     showFormModal: typeof window.showFormModal,
-    handleEditClick: typeof window.handleEditClick
+    handleEditClick: typeof window.handleEditClick,
+    handleSubmit: typeof window.handleSubmit
 });
