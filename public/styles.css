@@ -1597,3 +1597,125 @@ button.small {
         max-width: 95%;
     }
 }
+
+.grafico-modal {
+    max-width: 1400px;
+    max-height: 90vh;
+}
+
+.grafico-year-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--input-bg);
+    border-radius: 10px;
+}
+
+.grafico-year-nav h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    min-width: 100px;
+    text-align: center;
+}
+
+.year-nav-btn {
+    background: transparent !important;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin: 0 !important;
+}
+
+.year-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+    color: var(--text-primary);
+}
+
+.grafico-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--bg-card);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.grafico-totais {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.grafico-totais .total-box {
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.grafico-totais .total-label-simple {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.grafico-totais .total-value-simple {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.grafico-totais .valor-total-box .total-value-simple {
+    color: var(--success-color);
+}
+
+.grafico-totais .frete-total-box .total-value-simple {
+    color: var(--info-color);
+}
+
+/* AJUSTES PARA O HEADER DO MODAL DE ALERTA */
+.modal-header-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0 1rem 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* RESPONSIVO PARA GRÁFICO */
+@media (max-width: 768px) {
+    .grafico-modal {
+        max-width: 95%;
+    }
+    
+    .grafico-container {
+        height: 300px;
+    }
+    
+    .grafico-totais {
+        grid-template-columns: 1fr;
+    }
+    
+    .grafico-totais .total-value-simple {
+        font-size: 1.5rem;
+    }
+}
