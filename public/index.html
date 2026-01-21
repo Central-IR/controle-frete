@@ -70,7 +70,7 @@
                         <div class="stat-label">Em Trânsito</div>
                     </div>
                 </div>
-                <div class="stat-card stat-card-success" onclick="showValorTotalModal()" style="cursor: pointer;" title="Clique para ver detalhes mensais">
+                <div class="stat-card stat-card-success">
                     <div class="stat-icon stat-icon-success">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="1" x2="12" y2="23"></line>
@@ -157,6 +157,13 @@
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                     </button>
+                    <button class="calendar-btn" onclick="showGraficoModal()" title="Visualizar Gráfico">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="20" x2="12" y2="10"></line>
+                            <line x1="18" y1="20" x2="18" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="16"></line>
+                        </svg>
+                    </button>
                     <button class="calendar-btn" onclick="sincronizarDados()" title="Sincronizar">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <polyline points="23 4 23 10 17 10"></polyline>
@@ -203,6 +210,7 @@
                     <line x1="12" y1="9" x2="12" y2="13"></line>
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
+                <button class="close-modal" onclick="closeAlertModal()">✕</button>
             </div>
             
             <div class="modal-body" id="alertModalBody"></div>
@@ -213,13 +221,45 @@
         </div>
     </div>
 
-    <!-- MODAL VALOR TOTAL POR MÊS -->
-    <div class="modal-overlay" id="valorTotalModal" style="display: none;">
-        <div class="modal-content valor-total-modal">
-            <div class="modal-body-valores" id="valorTotalModalBody"></div>
+    <!-- MODAL GRÁFICO ANUAL -->
+    <div class="modal-overlay" id="graficoModal" style="display: none;">
+        <div class="modal-content grafico-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Análise Anual</h3>
+                <button class="close-modal" onclick="closeGraficoModal()">✕</button>
+            </div>
+            
+            <div class="grafico-year-nav">
+                <button onclick="changeGraficoYear(-1)" class="year-nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h3 id="graficoYear">2026</h3>
+                <button onclick="changeGraficoYear(1)" class="year-nav-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
 
-            <div class="modal-actions-valor-total">
-                <button type="button" onclick="closeValorTotalModal()" class="btn-close-red">Fechar</button>
+            <div class="grafico-container">
+                <canvas id="graficoCanvas"></canvas>
+            </div>
+
+            <div class="grafico-totais">
+                <div class="total-box valor-total-box">
+                    <div class="total-label-simple">VALOR TOTAL ANUAL</div>
+                    <div class="total-value-simple" id="graficoValorTotal">R$ 0,00</div>
+                </div>
+                <div class="total-box frete-total-box">
+                    <div class="total-label-simple">FRETE TOTAL ANUAL</div>
+                    <div class="total-value-simple" id="graficoFreteTotal">R$ 0,00</div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" onclick="closeGraficoModal()" class="secondary">Fechar</button>
             </div>
         </div>
     </div>
@@ -230,6 +270,7 @@
             if (splash) splash.style.display = 'none';
         }, 3000);
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="script.js"></script>
     <script src="calendar.js"></script>
 </body>
