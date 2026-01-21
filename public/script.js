@@ -907,6 +907,8 @@ window.showFormModal = function(editingId = null) {
                                         <option value="BROSLOG" ${frete?.transportadora === 'BROSLOG' ? 'selected' : ''}>BROSLOG</option>
                                         <option value="FAVORITA TRANSPORTES" ${frete?.transportadora === 'FAVORITA TRANSPORTES' ? 'selected' : ''}>FAVORITA TRANSPORTES</option>
                                         <option value="SNT LOG LTDA" ${frete?.transportadora === 'SNT LOG LTDA' ? 'selected' : ''}>SNT LOG LTDA</option>
+                                        <option value="TRANSLOVATO" ${frete?.transportadora === 'TRANSLOVATO' ? 'selected' : ''}>TRANSLOVATO</option>
+                                        <option value="TODO BRASIL" ${frete?.transportadora === 'TODO BRASIL' ? 'selected' : ''}>TODO BRASIL</option>
                                         <option value="ENTREGA PRÓPRIA" ${frete?.transportadora === 'ENTREGA PRÓPRIA' ? 'selected' : ''}>ENTREGA PRÓPRIA</option>
                                         <option value="DIRETO PELO FORNECEDOR" ${frete?.transportadora === 'DIRETO PELO FORNECEDOR' ? 'selected' : ''}>DIRETO PELO FORNECEDOR</option>
                                     </select>
