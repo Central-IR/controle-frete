@@ -10,15 +10,30 @@ let isOnline = false;
 let lastDataHash = '';
 let sessionToken = null;
 let currentMonth = new Date();
+let graficoAno = new Date().getFullYear();
+let chartInstance = null;
 
 const meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
+const mesesAbreviados = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
 console.log('✅ Controle de Frete iniciado');
 console.log('📍 API URL:', API_URL);
 console.log('🔧 Modo desenvolvimento:', DEVELOPMENT_MODE);
+
+// ============================================
+// CARREGAR CHART.JS DO CDN
+// ============================================
+(function loadChartJS() {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+    script.onload = () => console.log('✅ Chart.js carregado');
+    script.onerror = () => console.error('❌ Erro ao carregar Chart.js');
+    document.head.appendChild(script);
+})();
 
 // ============================================
 // INICIALIZAÇÃO
@@ -32,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
         verificarAutenticacao();
     }
     
-    // Configurar event delegation APÓS o DOM carregar
     setTimeout(setupEventDelegation, 100);
 });
 
@@ -42,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventDelegation() {
     console.log('🔧 Configurando Event Delegation...');
     
-    // Listener para checkboxes via event delegation
     document.body.addEventListener('change', function(e) {
         if (e.target.type === 'checkbox' && e.target.classList.contains('styled-checkbox')) {
             const row = e.target.closest('tr[data-id]');
@@ -87,7 +100,6 @@ window.handleEditClick = function(id) {
 window.handleDeleteClick = function(id) {
     console.log('🗑️ Tentando excluir frete:', id);
     
-    // Confirmação simples primeiro
     const confirmar = confirm('Tem certeza que deseja excluir este frete?');
     
     if (!confirmar) {
@@ -103,14 +115,12 @@ window.handleDeleteClick = function(id) {
     
     console.log('🗑️ Deletando NF:', numeroNF);
     
-    // Remove localmente
     fretes = fretes.filter(f => String(f.id) !== idStr);
     updateAllFilters();
     updateDashboard();
     filterFretes();
     showToast(`NF ${numeroNF} Excluído`, 'success');
     
-    // Remove no servidor
     if (isOnline || DEVELOPMENT_MODE) {
         fetch(`${API_URL}/fretes/${idStr}`, {
             method: 'DELETE',
@@ -126,7 +136,6 @@ window.handleDeleteClick = function(id) {
         })
         .catch(error => {
             console.error('❌ Erro ao deletar no servidor:', error);
-            // Restaura se falhou
             if (deletedFrete) {
                 fretes.push(deletedFrete);
                 updateAllFilters();
@@ -593,118 +602,180 @@ function updateDashboard() {
 }
 
 // ============================================
-// MODAL VALOR TOTAL POR MÊS
+// MODAL DE GRÁFICO
 // ============================================
-window.showValorTotalModal = function() {
-    const anoAtual = currentMonth.getFullYear();
-    const mesesAno = [];
+window.showGraficoModal = function() {
+    graficoAno = new Date().getFullYear();
+    document.getElementById('graficoYear').textContent = graficoAno;
     
-    for (let i = 0; i < 12; i++) {
-        const fretesDoMes = fretes.filter(f => {
-            const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
-            const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
-            return dataEmissao.getMonth() === i && 
-                   dataEmissao.getFullYear() === anoAtual &&
-                   isTipoEnvio;
-        });
-        
-        const valorFrete = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
-        const valorNF = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
-        
-        mesesAno.push({
-            mes: meses[i],
-            frete: valorFrete,
-            valor: valorNF
-        });
-    }
-    
-    const totalFrete = mesesAno.reduce((sum, m) => sum + m.frete, 0);
-    const totalValor = mesesAno.reduce((sum, m) => sum + m.valor, 0);
-    
-    const modalBody = document.getElementById('valorTotalModalBody');
-    if (!modalBody) return;
-    
-    const gerarCard = (m, idx) => {
-        let freteTrend = '';
-        let valorTrend = '';
-        let freteTrendClass = '';
-        let valorTrendClass = '';
-        
-        if (idx > 0) {
-            const mesAnterior = mesesAno[idx - 1];
-            
-            if (m.frete > mesAnterior.frete) {
-                freteTrend = '↑';
-                freteTrendClass = 'trend-up';
-            } else if (m.frete < mesAnterior.frete) {
-                freteTrend = '↓';
-                freteTrendClass = 'trend-down';
-            }
-            
-            if (m.valor > mesAnterior.valor) {
-                valorTrend = '↑';
-                valorTrendClass = 'trend-up';
-            } else if (m.valor < mesAnterior.valor) {
-                valorTrend = '↓';
-                valorTrendClass = 'trend-down';
-            }
-        }
-        
-        return `
-        <div class="valor-mes-card-simple">
-            <div class="mes-nome">${m.mes.substring(0, 3).toUpperCase()}</div>
-            <div class="mes-valores">
-                <div class="mes-valor-item">
-                    <span class="valor-num frete-color">R$ ${m.frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                    ${freteTrend ? `<span class="trend-simple ${freteTrendClass}">${freteTrend}</span>` : ''}
-                </div>
-                <div class="mes-valor-item">
-                    <span class="valor-num valor-color">R$ ${m.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                    ${valorTrend ? `<span class="trend-simple ${valorTrendClass}">${valorTrend}</span>` : ''}
-                </div>
-            </div>
-        </div>
-        `;
-    };
-    
-    const primeirosSeisMeses = mesesAno.slice(0, 6);
-    const ultimosSeisMeses = mesesAno.slice(6, 12);
-    
-    modalBody.innerHTML = `
-        <div class="valores-container-semestral">
-            <div class="semestre-row">
-                ${primeirosSeisMeses.map((m, idx) => gerarCard(m, idx)).join('')}
-            </div>
-            
-            <div class="semestre-row">
-                ${ultimosSeisMeses.map((m, idx) => gerarCard(m, idx + 6)).join('')}
-            </div>
-        </div>
-        
-        <div class="valores-totais-simple">
-            <div class="total-box frete-total-box">
-                <div class="total-label-simple">FRETE TOTAL</div>
-                <div class="total-value-simple">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-            </div>
-            <div class="total-box valor-total-box">
-                <div class="total-label-simple">VALOR TOTAL</div>
-                <div class="total-value-simple">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-            </div>
-        </div>
-    `;
-    
-    const valorTotalModal = document.getElementById('valorTotalModal');
-    if (valorTotalModal) {
-        valorTotalModal.style.display = 'flex';
+    const graficoModal = document.getElementById('graficoModal');
+    if (graficoModal) {
+        graficoModal.style.display = 'flex';
+        setTimeout(() => renderGrafico(), 100);
     }
 };
 
-window.closeValorTotalModal = function() {
-    const valorTotalModal = document.getElementById('valorTotalModal');
-    if (valorTotalModal) {
-        valorTotalModal.style.display = 'none';
+window.closeGraficoModal = function() {
+    const graficoModal = document.getElementById('graficoModal');
+    if (graficoModal) {
+        graficoModal.style.display = 'none';
+        if (chartInstance) {
+            chartInstance.destroy();
+            chartInstance = null;
+        }
     }
 };
+
+window.changeGraficoYear = function(direction) {
+    graficoAno += direction;
+    document.getElementById('graficoYear').textContent = graficoAno;
+    renderGrafico();
+};
+
+function renderGrafico() {
+    if (!window.Chart) {
+        console.error('Chart.js não carregado');
+        return;
+    }
+
+    const dadosMensais = calcularDadosMensais(graficoAno);
+    
+    const canvas = document.getElementById('graficoCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+    
+    chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: mesesAbreviados,
+            datasets: [
+                {
+                    label: 'Valor Total',
+                    data: dadosMensais.valores,
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderWidth: 2,
+                    borderRadius: 6
+                },
+                {
+                    label: 'Frete Total',
+                    data: dadosMensais.fretes,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        },
+                        padding: 15,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                            return label;
+                        }
+                    },
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 13,
+                        weight: '600'
+                    },
+                    bodyFont: {
+                        size: 12
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5000000,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + (value / 1000000).toFixed(1) + 'M';
+                        },
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 11,
+                            weight: '600'
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    document.getElementById('graficoValorTotal').textContent = 
+        'R$ ' + dadosMensais.totalValor.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    
+    document.getElementById('graficoFreteTotal').textContent = 
+        'R$ ' + dadosMensais.totalFrete.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+}
+
+function calcularDadosMensais(ano) {
+    const valores = new Array(12).fill(0);
+    const fretes = new Array(12).fill(0);
+    
+    fretes.forEach(f => {
+        const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
+        const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
+        
+        if (dataEmissao.getFullYear() === ano && isTipoEnvio) {
+            const mes = dataEmissao.getMonth();
+            valores[mes] += parseFloat(f.valor_nf || 0);
+            fretes[mes] += parseFloat(f.valor_frete || 0);
+        }
+    });
+    
+    const totalValor = valores.reduce((sum, v) => sum + v, 0);
+    const totalFrete = fretes.reduce((sum, f) => sum + f, 0);
+    
+    return { valores, fretes: fretes, totalValor, totalFrete };
+}
 
 // ============================================
 // MODAL DE CONFIRMAÇÃO
@@ -761,7 +832,6 @@ window.toggleForm = function() {
     showFormModal(null);
 };
 
-// FUNÇÃO PRINCIPAL SHOWFORMMODAL - EXPOSTA GLOBALMENTE NO INÍCIO
 window.showFormModal = function(editingId = null) {
     console.log('📝 showFormModal chamada com ID:', editingId);
     
@@ -950,7 +1020,6 @@ window.showFormModal = function(editingId = null) {
         </div>
     `;
 
-    // Remove modal existente se houver
     const existingModal = document.getElementById('formModal');
     if (existingModal) {
         existingModal.remove();
