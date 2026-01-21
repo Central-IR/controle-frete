@@ -221,7 +221,7 @@
         </div>
     </div>
 
-    <!-- MODAL GRÁFICO ANUAL -->
+    <!-- MODAL DASHBOARDS MENSAIS -->
     <div class="modal-overlay" id="graficoModal" style="display: none;">
         <div class="modal-content grafico-modal">
             <div class="modal-header">
@@ -229,23 +229,21 @@
                 <button class="close-modal" onclick="closeGraficoModal()">✕</button>
             </div>
             
-            <div class="grafico-year-nav">
-                <button onclick="changeGraficoYear(-1)" class="year-nav-btn">
+            <div class="grafico-year-nav-simple">
+                <button onclick="changeGraficoYear(-1)" class="year-nav-btn-simple">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
                 </button>
                 <h3 id="graficoYear">2026</h3>
-                <button onclick="changeGraficoYear(1)" class="year-nav-btn">
+                <button onclick="changeGraficoYear(1)" class="year-nav-btn-simple">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                 </button>
             </div>
 
-            <div class="grafico-container">
-                <canvas id="graficoCanvas"></canvas>
-            </div>
+            <div class="dashboards-container" id="dashboardsContainer"></div>
 
             <div class="grafico-totais">
                 <div class="total-box valor-total-box">
@@ -270,7 +268,6 @@
             if (splash) splash.style.display = 'none';
         }, 3000);
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="script.js"></script>
     <script src="calendar.js"></script>
 </body>
