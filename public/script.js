@@ -909,6 +909,8 @@ window.showFormModal = function(editingId = null) {
                                         <option value="SNT LOG LTDA" ${frete?.transportadora === 'SNT LOG LTDA' ? 'selected' : ''}>SNT LOG LTDA</option>
                                         <option value="TRANSLOVATO" ${frete?.transportadora === 'TRANSLOVATO' ? 'selected' : ''}>TRANSLOVATO</option>
                                         <option value="TODO BRASIL" ${frete?.transportadora === 'TODO BRASIL' ? 'selected' : ''}>TODO BRASIL</option>
+                                        <option value="AZURE" ${frete?.transportadora === 'AZURE' ? 'selected' : ''}>AZURE</option>
+                                        <option value="RODONAVES" ${frete?.transportadora === 'RODONAVES' ? 'selected' : ''}>RODONAVES</option>
                                         <option value="ENTREGA PRÓPRIA" ${frete?.transportadora === 'ENTREGA PRÓPRIA' ? 'selected' : ''}>ENTREGA PRÓPRIA</option>
                                         <option value="DIRETO PELO FORNECEDOR" ${frete?.transportadora === 'DIRETO PELO FORNECEDOR' ? 'selected' : ''}>DIRETO PELO FORNECEDOR</option>
                                     </select>
