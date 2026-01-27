@@ -1142,9 +1142,11 @@ window.handleSubmit = async function(event) {
         observacoes: observacoesValue
     };
 
-    if (formData.tipo_nf && formData.tipo_nf !== 'ENVIO') {
-        formData.status = null;
-    }
+    // O backend vai calcular o status automaticamente baseado em:
+    // 1. tipo_nf (se for tipo especial, status = null)
+    // 2. data_entrega (se existir, status = ENTREGUE)
+    // 3. padrão (se não tiver data_entrega, status = EM_TRANSITO)
+    // Não enviamos status no formData para deixar o backend decidir
 
     const editId = document.getElementById('editId').value;
 
