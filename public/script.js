@@ -12,8 +12,6 @@ let sessionToken = null;
 let currentMonth = new Date();
 let graficoYear = new Date().getFullYear();
 let graficoChart = null;
-let currentUser = null;
-let notificationCheckInterval = null;
 
 const meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -21,22 +19,6 @@ const meses = [
 ];
 
 const mesesAbrev = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-
-// Mapeamento de usernames para nomes pessoais
-function getNomePessoal(username) {
-    const nomes = {
-        'financeiro1': 'Pollyanna',
-        'vendas': 'Isaque',
-        'vendas2': 'Miguel',
-        'Rosemeire': 'Rosemeire',
-        'Roberto': 'Roberto',
-        'almox': 'Gustavo',
-        'suporte': 'Luiz'
-    };
-    return nomes[username] || username || 'Usuário';
-}
-
-
 
 console.log('✅ Controle de Frete iniciado');
 console.log('📍 API URL:', API_URL);
@@ -207,7 +189,7 @@ window.handleCheckboxChange = async function(id) {
 // ============================================
 // MODAL DE VISUALIZAÇÃO
 // ============================================
-function mostrarModalVisualizacao(frete, marcarComoLido = false) {
+function mostrarModalVisualizacao(frete) {
     let observacoesArray = [];
     if (frete.observacoes) {
         try {
@@ -224,7 +206,6 @@ function mostrarModalVisualizacao(frete, marcarComoLido = false) {
             <div class="observacao-item-view">
                 <div class="observacao-header">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <span class="observacao-autor-text">${obs.autorNome || 'Usuário'}</span>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
             </div>
@@ -249,7 +230,7 @@ function mostrarModalVisualizacao(frete, marcarComoLido = false) {
                         <button class="tab-btn active" onclick="switchViewTab(0)">Dados da Nota</button>
                         <button class="tab-btn" onclick="switchViewTab(1)">Órgão</button>
                         <button class="tab-btn" onclick="switchViewTab(2)">Transporte</button>
-                        <button class="tab-btn" onclick="switchViewTab(3, '${frete.id}')">Observações</button>
+                        <button class="tab-btn" onclick="switchViewTab(3)">Observações</button>
                     </div>
 
                     <div class="tab-content active" id="view-tab-nota">
@@ -305,12 +286,6 @@ function mostrarModalVisualizacao(frete, marcarComoLido = false) {
     if (existingModal) existingModal.remove();
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    if (marcarComoLido) {
-        setTimeout(() => {
-            switchViewTab(3, frete.id);
-        }, 100);
-    }
 }
 
 window.closeViewModal = function() {
@@ -321,7 +296,7 @@ window.closeViewModal = function() {
     }
 };
 
-window.switchViewTab = function(index, freteId = null) {
+window.switchViewTab = function(index) {
     document.querySelectorAll('#viewModal .tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
@@ -329,68 +304,29 @@ window.switchViewTab = function(index, freteId = null) {
     document.querySelectorAll('#viewModal .tab-content').forEach((content, i) => {
         content.classList.toggle('active', i === index);
     });
-    
-    if (index === 3 && freteId) {
-        marcarObservacoesComoLidas(freteId);
-    }
 };
 
 // ============================================
 // AUTENTICAÇÃO
 // ============================================
-async function verificarAutenticacao() {
-    console.log('🔐 Verificando autenticação...');
-    
+function verificarAutenticacao() {
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('session');
-    
-    if (!token) {
-        const storedToken = sessionStorage.getItem('controleFreteSession');
-        if (!storedToken) {
-            console.log('❌ Sem token de sessão');
-            window.location.href = PORTAL_URL;
-            return;
-        }
-        sessionToken = storedToken;
-    } else {
-        sessionToken = token;
-        sessionStorage.setItem('controleFreteSession', token);
+    const tokenFromUrl = urlParams.get('sessionToken');
+
+    if (tokenFromUrl) {
+        sessionToken = tokenFromUrl;
+        sessionStorage.setItem('controleFreteSession', tokenFromUrl);
         window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        sessionToken = sessionStorage.getItem('controleFreteSession');
     }
-    
-    try {
-        const response = await fetch(`${PORTAL_URL}/api/verify-session`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionToken })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Sessão inválida');
-        }
-        
-        const sessionData = await response.json();
-        
-        if (!sessionData.valid) {
-            throw new Error('Sessão expirada');
-        }
-        
-        const username = sessionData.session.username || sessionData.session.userId || sessionData.session.id;
-        currentUser = {
-            userId: username,
-            nome: getNomePessoal(username),
-            username: username
-        };
-        
-        console.log('✅ Autenticado como:', currentUser.nome);
-        
-        inicializarApp();
-        
-    } catch (error) {
-        console.error('❌ Erro na autenticação:', error);
-        sessionStorage.removeItem('controleFreteSession');
-        window.location.href = PORTAL_URL;
+
+    if (!sessionToken) {
+        mostrarTelaAcessoNegado();
+        return;
     }
+
+    inicializarApp();
 }
 
 function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
@@ -416,145 +352,6 @@ function inicializarApp() {
     setInterval(checkServerStatus, 15000);
     startPolling();
 }
-
-// ============================================
-// SISTEMA DE NOTIFICAÇÕES
-// ============================================
-function startNotificationCheck() {
-    checkForNewObservations();
-    
-    if (notificationCheckInterval) {
-        clearInterval(notificationCheckInterval);
-    }
-    
-    notificationCheckInterval = setInterval(() => {
-        checkForNewObservations();
-    }, 60000);
-    
-    console.log('🔔 Sistema de notificações iniciado');
-}
-
-function checkForNewObservations() {
-    if (!currentUser || !fretes.length) return;
-    
-    const userId = currentUser.userId;
-    
-    fretes.forEach(frete => {
-        let observacoesArray = [];
-        try {
-            observacoesArray = typeof frete.observacoes === 'string' 
-                ? JSON.parse(frete.observacoes) 
-                : (frete.observacoes || []);
-        } catch (e) {
-            console.error('Erro ao parsear observações:', e);
-            return;
-        }
-        
-        if (observacoesArray.length === 0) return;
-        
-        let observacoesLidas = {};
-        try {
-            observacoesLidas = typeof frete.observacoes_lidas === 'string' 
-                ? JSON.parse(frete.observacoes_lidas) 
-                : (frete.observacoes_lidas || {});
-        } catch (e) {
-            console.error('Erro ao parsear observacoes_lidas:', e);
-        }
-        
-        const ultimaObservacao = observacoesArray[observacoesArray.length - 1];
-        const autorUltimaObs = ultimaObservacao.userId || ultimaObservacao.autor;
-        
-        if (autorUltimaObs !== userId) {
-            const dataLeitura = observacoesLidas[userId];
-            const dataUltimaObs = new Date(ultimaObservacao.timestamp);
-            
-            if (!dataLeitura || new Date(dataLeitura) < dataUltimaObs) {
-                showObservationNotification(frete);
-            }
-        }
-    });
-}
-
-function showObservationNotification(frete) {
-    const existingNotification = document.querySelector(`.notification-toast[data-frete-id="${frete.id}"]`);
-    if (existingNotification) {
-        return;
-    }
-    
-    const notificationDiv = document.createElement('div');
-    notificationDiv.className = 'notification-toast';
-    notificationDiv.setAttribute('data-frete-id', frete.id);
-    
-    notificationDiv.innerHTML = `
-        <div class="notification-content">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-            <div class="notification-text">
-                A Nota Fiscal <strong>${frete.numero_nf}</strong> tem uma nova observação!
-            </div>
-        </div>
-        <button class="notification-close" onclick="closeNotification(this, '${frete.id}')">✕</button>
-    `;
-    
-    notificationDiv.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('notification-close')) {
-            mostrarModalVisualizacao(frete, true);
-            notificationDiv.remove();
-        }
-    });
-    
-    document.body.appendChild(notificationDiv);
-    
-    setTimeout(() => {
-        if (notificationDiv.parentElement) {
-            notificationDiv.style.animation = 'slideOutRight 0.3s ease forwards';
-            setTimeout(() => notificationDiv.remove(), 300);
-        }
-    }, 30000);
-}
-
-window.closeNotification = function(button, freteId) {
-    const notification = button.closest('.notification-toast');
-    if (notification) {
-        notification.style.animation = 'slideOutRight 0.3s ease forwards';
-        setTimeout(() => notification.remove(), 300);
-    }
-};
-
-async function marcarObservacoesComoLidas(freteId) {
-    if (!currentUser) return;
-    
-    try {
-        const response = await fetch(`${API_URL}/fretes/${freteId}/marcar-lido`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Session-Token': sessionToken,
-                'Accept': 'application/json'
-            },
-            mode: 'cors'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Erro ao marcar como lido');
-        }
-        
-        const result = await response.json();
-        
-        const index = fretes.findIndex(f => String(f.id) === String(freteId));
-        if (index !== -1 && result.data) {
-            fretes[index] = result.data;
-        }
-        
-        console.log('✅ Observações marcadas como lidas');
-        
-    } catch (error) {
-        console.error('❌ Erro ao marcar observações como lidas:', error);
-    }
-}
-
 
 // ============================================
 // CONEXÃO E STATUS
@@ -1007,18 +804,16 @@ window.showFormModal = function(editingId = null) {
     const observacoesHTML = observacoesArray.length > 0 
         ? observacoesArray.map((obs, idx) => `
             <div class="observacao-item" data-index="${idx}">
-                <div class="observacao-info">
+                <div class="observacao-header">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <span class="observacao-autor-text">${obs.autorNome || 'Usuário'}</span>
+                    <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
-                <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                    Remover
-                </button>
             </div>
         `).join('')
         : '<p style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 2rem;">Nenhuma observação registrada</p>';
@@ -1211,10 +1006,7 @@ window.adicionarObservacao = function() {
     
     observacoes.push({
         texto: texto,
-        timestamp: new Date().toISOString(),
-        userId: currentUser.userId,
-        autorNome: currentUser.nome,
-        autor: currentUser.username
+        timestamp: new Date().toISOString()
     });
     
     observacoesDataField.value = JSON.stringify(observacoes);
@@ -1243,18 +1035,16 @@ function atualizarListaObservacoes() {
     } else {
         container.innerHTML = observacoes.map((obs, idx) => `
             <div class="observacao-item" data-index="${idx}">
-                <div class="observacao-info">
+                <div class="observacao-header">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <span class="observacao-autor-text">${obs.autorNome || 'Usuário'}</span>
+                    <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
-                <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                    Remover
-                </button>
             </div>
         `).join('');
     }
