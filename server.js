@@ -183,6 +183,7 @@ app.post('/api/fretes', async (req, res) => {
             data_coleta,
             cidade_destino,
             previsao_entrega,
+            data_entrega,
             observacoes
         } = req.body;
 
@@ -222,6 +223,7 @@ app.post('/api/fretes', async (req, res) => {
                 data_coleta,
                 cidade_destino: cidade_destino || 'NÃO INFORMADO',
                 previsao_entrega: previsao_entrega || null,
+                data_entrega: data_entrega || null,
                 status,
                 observacoes: observacoes || '[]'
             }])
@@ -241,7 +243,7 @@ app.post('/api/fretes', async (req, res) => {
     }
 });
 
-// PUT - Atualizar frete (CORRIGIDO!)
+// PUT - Atualizar frete
 app.put('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -262,6 +264,7 @@ app.put('/api/fretes/:id', async (req, res) => {
             data_coleta,
             cidade_destino,
             previsao_entrega,
+            data_entrega,
             observacoes
         } = req.body;
 
@@ -295,6 +298,7 @@ app.put('/api/fretes/:id', async (req, res) => {
             data_coleta,
             cidade_destino,
             previsao_entrega,
+            data_entrega: data_entrega || null,
             status,
             observacoes: observacoes || '[]'
         };
@@ -323,17 +327,28 @@ app.put('/api/fretes/:id', async (req, res) => {
     }
 });
 
-// PATCH - Toggle status (checkbox)
+// PATCH - Toggle status (checkbox) + data_entrega
 app.patch('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, data_entrega } = req.body;
 
         console.log(`🔄 Toggle status do frete ${id} para: ${status}`);
+        if (data_entrega !== undefined) {
+            console.log(`📅 Definindo data_entrega para: ${data_entrega}`);
+        }
+
+        // Preparar dados para atualização
+        const updateData = { status };
+        
+        // Se data_entrega foi enviada, incluir na atualização
+        if (data_entrega !== undefined) {
+            updateData.data_entrega = data_entrega;
+        }
 
         const { data, error } = await supabase
             .from('controle_frete')
-            .update({ status })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
@@ -384,8 +399,9 @@ app.get('/', (req, res) => {
     res.json({ 
         status: 'online',
         service: 'Controle de Frete API',
-        version: '2.1.0',
-        timestamp: new Date().toISOString()
+        version: '2.2.0',
+        timestamp: new Date().toISOString(),
+        updates: 'Adicionado suporte a data_entrega e username em observações'
     });
 });
 
@@ -409,11 +425,12 @@ app.use((error, req, res, next) => {
 // INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 ================================');
-    console.log(`🚀 Controle de Frete API v2.1.0`);
+    console.log(`🚀 Controle de Frete API v2.2.0`);
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`🔗 Supabase URL: ${supabaseUrl}`);
     console.log(`📁 Public folder: ${publicPath}`);
     console.log(`🔐 Autenticação: Ativa`);
     console.log(`🌐 Portal URL: ${PORTAL_URL}`);
+    console.log(`✨ Novo: data_entrega + username`);
     console.log('🚀 ================================\n');
 });
