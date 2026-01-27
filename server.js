@@ -32,7 +32,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Log de requisições
 app.use((req, res, next) => {
-    console.log(`📥 ${new Date().toISOString()} - ${req.method} ${req.path}`);
+    console.log(`🔥 ${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
 });
 
@@ -186,22 +186,16 @@ app.post('/api/fretes', async (req, res) => {
             observacoes
         } = req.body;
 
-        // Validações mínimas
         if (!numero_nf || !nome_orgao || !data_coleta) {
             return res.status(400).json({ 
                 error: 'Campos obrigatórios faltando: numero_nf, nome_orgao, data_coleta'
             });
         }
 
-        // Calcular status baseado no tipo_nf
-        let status = 'EM_TRANSITO'; // Default para ENVIO
-        
+        let status = 'EM_TRANSITO';
         const tipoNf = tipo_nf || 'ENVIO';
-        
-        // Tipos que usam status: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
         const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
         
-        // Se não for um dos tipos com status, status é null
         if (!tiposComStatus.includes(tipoNf)) {
             status = null;
         }
@@ -223,7 +217,8 @@ app.post('/api/fretes', async (req, res) => {
                 cidade_destino: cidade_destino || 'NÃO INFORMADO',
                 previsao_entrega: previsao_entrega || null,
                 status,
-                observacoes: observacoes || '[]'
+                observacoes: observacoes || '[]',
+                observacoes_lidas: '{}'
             }])
             .select()
             .single();
@@ -241,12 +236,11 @@ app.post('/api/fretes', async (req, res) => {
     }
 });
 
-// PUT - Atualizar frete (CORRIGIDO!)
+// PUT - Atualizar frete
 app.put('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
         console.log(`✏️ Atualizando frete: ${id}`);
-        console.log('📦 Dados recebidos:', req.body);
         
         const {
             numero_nf,
@@ -262,24 +256,17 @@ app.put('/api/fretes/:id', async (req, res) => {
             data_coleta,
             cidade_destino,
             previsao_entrega,
-            observacoes
+            observacoes,
+            observacoes_lidas
         } = req.body;
 
-        // Calcular status baseado no tipo_nf
         let status = 'EM_TRANSITO';
-        
         const tipoNf = tipo_nf || 'ENVIO';
-        
-        // Tipos que usam status: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
         const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
         
-        // Se não for um dos tipos com status, status é null
         if (!tiposComStatus.includes(tipoNf)) {
             status = null;
         }
-        
-        console.log(`📝 Atualizando tipo_nf para: ${tipoNf}`);
-        console.log(`📝 Atualizando status para: ${status}`);
 
         const updateData = {
             numero_nf,
@@ -298,6 +285,10 @@ app.put('/api/fretes/:id', async (req, res) => {
             status,
             observacoes: observacoes || '[]'
         };
+
+        if (observacoes_lidas !== undefined) {
+            updateData.observacoes_lidas = observacoes_lidas;
+        }
 
         const { data, error } = await supabase
             .from('controle_frete')
@@ -323,7 +314,7 @@ app.put('/api/fretes/:id', async (req, res) => {
     }
 });
 
-// PATCH - Toggle status (checkbox)
+// PATCH - Toggle status
 app.patch('/api/fretes/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -350,6 +341,59 @@ app.patch('/api/fretes/:id', async (req, res) => {
         console.error('❌ Erro ao atualizar status:', error);
         res.status(500).json({ 
             error: 'Erro ao atualizar status',
+            details: error.message 
+        });
+    }
+});
+
+// NOVA ROTA - Marcar observações como lidas
+app.post('/api/fretes/:id/marcar-lido', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user?.userId || req.user?.id || req.user?.username;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'Usuário não identificado' });
+        }
+
+        console.log(`📖 Marcando observações como lidas - Frete: ${id}, Usuário: ${userId}`);
+
+        const { data: frete, error: fetchError } = await supabase
+            .from('controle_frete')
+            .select('observacoes_lidas')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        let observacoesLidas = {};
+        try {
+            if (frete.observacoes_lidas) {
+                observacoesLidas = typeof frete.observacoes_lidas === 'string' 
+                    ? JSON.parse(frete.observacoes_lidas) 
+                    : frete.observacoes_lidas;
+            }
+        } catch (e) {
+            console.error('Erro ao parsear observacoes_lidas:', e);
+        }
+
+        observacoesLidas[userId] = new Date().toISOString();
+
+        const { data, error } = await supabase
+            .from('controle_frete')
+            .update({ observacoes_lidas: observacoesLidas })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        console.log('✅ Observações marcadas como lidas');
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('❌ Erro ao marcar como lido:', error);
+        res.status(500).json({ 
+            error: 'Erro ao marcar como lido',
             details: error.message 
         });
     }
@@ -384,7 +428,7 @@ app.get('/', (req, res) => {
     res.json({ 
         status: 'online',
         service: 'Controle de Frete API',
-        version: '2.1.0',
+        version: '2.2.0',
         timestamp: new Date().toISOString()
     });
 });
@@ -409,11 +453,12 @@ app.use((error, req, res, next) => {
 // INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n🚀 ================================');
-    console.log(`🚀 Controle de Frete API v2.1.0`);
+    console.log(`🚀 Controle de Frete API v2.2.0`);
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`🔗 Supabase URL: ${supabaseUrl}`);
     console.log(`📁 Public folder: ${publicPath}`);
     console.log(`🔐 Autenticação: Ativa`);
     console.log(`🌐 Portal URL: ${PORTAL_URL}`);
+    console.log(`🔔 Notificações: Ativas`);
     console.log('🚀 ================================\n');
 });
