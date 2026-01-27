@@ -22,6 +22,22 @@ const meses = [
 
 const mesesAbrev = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
+// Mapeamento de usernames para nomes pessoais
+function getNomePessoal(username) {
+    const nomes = {
+        'financeiro1': 'Pollyanna',
+        'vendas': 'Isaque',
+        'vendas2': 'Miguel',
+        'Rosemeire': 'Rosemeire',
+        'Roberto': 'Roberto',
+        'almox': 'Gustavo',
+        'suporte': 'Luiz'
+    };
+    return nomes[username] || username || 'Usuário';
+}
+
+
+
 console.log('✅ Controle de Frete iniciado');
 console.log('📍 API URL:', API_URL);
 console.log('🔧 Modo desenvolvimento:', DEVELOPMENT_MODE);
@@ -208,7 +224,7 @@ function mostrarModalVisualizacao(frete, marcarComoLido = false) {
             <div class="observacao-item-view">
                 <div class="observacao-header">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <span class="observacao-autor">${obs.autorNome || obs.autor || 'Usuário'}</span>
+                    <span class="observacao-autor-text">${obs.autorNome || 'Usuário'}</span>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
             </div>
@@ -359,10 +375,11 @@ async function verificarAutenticacao() {
             throw new Error('Sessão expirada');
         }
         
+        const username = sessionData.session.username || sessionData.session.userId || sessionData.session.id;
         currentUser = {
-            userId: sessionData.session.userId || sessionData.session.id || sessionData.session.username,
-            nome: sessionData.session.nome || sessionData.session.username || 'Usuário',
-            username: sessionData.session.username || 'usuario'
+            userId: username,
+            nome: getNomePessoal(username),
+            username: username
         };
         
         console.log('✅ Autenticado como:', currentUser.nome);
@@ -992,7 +1009,7 @@ window.showFormModal = function(editingId = null) {
             <div class="observacao-item" data-index="${idx}">
                 <div class="observacao-info">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <span class="observacao-autor">${obs.autorNome || obs.autor || 'Usuário'}</span>
+                    <span class="observacao-autor-text">${obs.autorNome || 'Usuário'}</span>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
                 <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
@@ -1228,7 +1245,7 @@ function atualizarListaObservacoes() {
             <div class="observacao-item" data-index="${idx}">
                 <div class="observacao-info">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <span class="observacao-autor">${obs.autorNome || obs.autor || 'Usuário'}</span>
+                    <span class="observacao-autor-text">${obs.autorNome || 'Usuário'}</span>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
                 <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
