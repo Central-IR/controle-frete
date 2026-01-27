@@ -1747,6 +1747,13 @@ button.small {
     white-space: nowrap;
 }
 
+.observacao-autor-text {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    font-weight: 400;
+    white-space: nowrap;
+}
+
 .observacao-texto {
     color: var(--text-primary);
     line-height: 1.5;
@@ -1840,6 +1847,10 @@ button.small {
     
     .observacao-autor {
         background: rgba(204, 112, 0, 0.2);
+    }
+    
+    .observacao-autor-text {
+        color: var(--text-primary);
     }
 }
 
