@@ -152,6 +152,18 @@ window.handleCheckboxChange = async function(id) {
     
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
     
+    // Preparar dados para atualização
+    const updateData = { status: novoStatus };
+    
+    // Se está marcando como ENTREGUE e não tem data_entrega, define a data atual
+    if (novoStatus === 'ENTREGUE' && !frete.data_entrega) {
+        const hoje = new Date();
+        updateData.data_entrega = hoje.toISOString().split('T')[0];
+    }
+    
+    // Se está desmarcando (voltando para EM_TRANSITO), manter a data_entrega existente
+    // A data só será removida se o usuário editar manualmente
+    
     if (isOnline || DEVELOPMENT_MODE) {
         try {
             const response = await fetch(`${API_URL}/fretes/${idStr}`, {
@@ -161,7 +173,7 @@ window.handleCheckboxChange = async function(id) {
                     'X-Session-Token': sessionToken,
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ status: novoStatus }),
+                body: JSON.stringify(updateData),
                 mode: 'cors'
             });
             
@@ -205,7 +217,10 @@ function mostrarModalVisualizacao(frete) {
         ? observacoesArray.map(obs => `
             <div class="observacao-item-view">
                 <div class="observacao-header">
-                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                    <div class="observacao-info">
+                        <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                        ${obs.username ? `<span class="observacao-username">• ${obs.username}</span>` : ''}
+                    </div>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
             </div>
@@ -261,6 +276,7 @@ function mostrarModalVisualizacao(frete) {
                             <p><strong>Data Coleta:</strong> ${frete.data_coleta ? formatDate(frete.data_coleta) : '-'}</p>
                             <p><strong>Destino:</strong> ${displayValue(frete.cidade_destino)}</p>
                             <p><strong>Previsão Entrega:</strong> ${frete.previsao_entrega ? formatDate(frete.previsao_entrega) : '-'}</p>
+                            <p><strong>Data Entrega:</strong> ${frete.data_entrega ? formatDate(frete.data_entrega) : '-'}</p>
                             <p><strong>Status:</strong> ${getStatusBadgeForRender(frete)}</p>
                         </div>
                     </div>
@@ -805,7 +821,10 @@ window.showFormModal = function(editingId = null) {
         ? observacoesArray.map((obs, idx) => `
             <div class="observacao-item" data-index="${idx}">
                 <div class="observacao-header">
-                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                    <div class="observacao-info">
+                        <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                        ${obs.username ? `<span class="observacao-username">• ${obs.username}</span>` : ''}
+                    </div>
                     <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -931,6 +950,10 @@ window.showFormModal = function(editingId = null) {
                                     <label for="previsao_entrega">Previsão de Entrega</label>
                                     <input type="date" id="previsao_entrega" value="${frete?.previsao_entrega || ''}">
                                 </div>
+                                <div class="form-group">
+                                    <label for="data_entrega">Data de Entrega</label>
+                                    <input type="date" id="data_entrega" value="${frete?.data_entrega || ''}">
+                                </div>
                             </div>
                         </div>
 
@@ -1004,9 +1027,13 @@ window.adicionarObservacao = function() {
     const observacoesDataField = document.getElementById('observacoesData');
     let observacoes = JSON.parse(observacoesDataField.value || '[]');
     
+    // Adicionar username à observação
+    const username = sessionStorage.getItem('username') || 'Usuário';
+    
     observacoes.push({
         texto: texto,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        username: username
     });
     
     observacoesDataField.value = JSON.stringify(observacoes);
@@ -1036,7 +1063,10 @@ function atualizarListaObservacoes() {
         container.innerHTML = observacoes.map((obs, idx) => `
             <div class="observacao-item" data-index="${idx}">
                 <div class="observacao-header">
-                    <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                    <div class="observacao-info">
+                        <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
+                        ${obs.username ? `<span class="observacao-username">• ${obs.username}</span>` : ''}
+                    </div>
                     <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1108,6 +1138,7 @@ window.handleSubmit = async function(event) {
         data_coleta: document.getElementById('data_coleta').value,
         cidade_destino: document.getElementById('cidade_destino').value.trim() || 'NÃO INFORMADO',
         previsao_entrega: document.getElementById('previsao_entrega').value || null,
+        data_entrega: document.getElementById('data_entrega').value || null,
         observacoes: observacoesValue
     };
 
@@ -1374,10 +1405,10 @@ function renderFretes(fretesToRender) {
                             <span style="font-size: 1.1rem;">✓</span>
                         </th>
                         <th>NF</th>
-                        <th>Emissão</th>
                         <th>Órgão</th>
                         <th>Vendedor</th>
                         <th>Transportadora</th>
+                        <th>Data Entrega</th>
                         <th>Valor NF</th>
                         <th>Status</th>
                         <th style="text-align: center;">Ações</th>
@@ -1412,10 +1443,10 @@ function renderFretes(fretesToRender) {
                                 ` : ''}
                             </td>
                             <td><strong>${f.numero_nf || '-'}</strong></td>
-                            <td style="white-space: nowrap;">${formatDate(f.data_emissao)}</td>
                             <td style="max-width: 200px; word-wrap: break-word; white-space: normal;">${f.nome_orgao || '-'}</td>
                             <td>${displayValue(f.vendedor)}</td>
                             <td>${displayValue(f.transportadora)}</td>
+                            <td style="white-space: nowrap;">${f.data_entrega ? formatDate(f.data_entrega) : '-'}</td>
                             <td><strong>R$ ${f.valor_nf ? parseFloat(f.valor_nf).toFixed(2) : '0,00'}</strong></td>
                             <td>${getStatusBadgeForRender(f)}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
