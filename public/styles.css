@@ -1415,9 +1415,22 @@ button.small {
     margin-bottom: 0.5rem;
 }
 
+.observacao-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 .observacao-data {
     font-size: 0.75rem;
     color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.observacao-username {
+    font-size: 0.75rem;
+    color: var(--primary);
     font-weight: 600;
 }
 
