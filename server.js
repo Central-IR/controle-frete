@@ -268,17 +268,29 @@ app.put('/api/fretes/:id', async (req, res) => {
             observacoes
         } = req.body;
 
-        // Calcular status baseado no tipo_nf
-        let status = 'EM_TRANSITO';
-        
         const tipoNf = tipo_nf || 'ENVIO';
         
         // Tipos que usam status: ENVIO, SIMPLES_REMESSA, REMESSA_AMOSTRA
         const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
         
-        // Se não for um dos tipos com status, status é null
+        // LÓGICA DE STATUS ATUALIZADA:
+        // 1. Se não é tipo com status → status = null
+        // 2. Se tem data_entrega definida → status = ENTREGUE (data_entrega tem prioridade)
+        // 3. Se não tem data_entrega → status = EM_TRANSITO (padrão)
+        
+        let status;
+        
         if (!tiposComStatus.includes(tipoNf)) {
+            // Tipos especiais não têm status
             status = null;
+        } else if (data_entrega) {
+            // Se tem data de entrega, está ENTREGUE (prioridade máxima)
+            status = 'ENTREGUE';
+            console.log(`✅ Status definido como ENTREGUE (data_entrega: ${data_entrega})`);
+        } else {
+            // Se não tem data de entrega, volta para EM_TRANSITO
+            status = 'EM_TRANSITO';
+            console.log(`📦 Status definido como EM_TRANSITO (sem data_entrega)`);
         }
         
         console.log(`📝 Atualizando tipo_nf para: ${tipoNf}`);
