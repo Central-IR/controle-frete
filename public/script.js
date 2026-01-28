@@ -778,8 +778,8 @@ function showConfirm(message, options = {}) {
         const { title = 'Confirmação', confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'warning' } = options;
 
         const modalHTML = `
-            <div class="modal-overlay" id="confirmModal" style="z-index: 10001;">
-                <div class="modal-content confirm-modal-content" style="max-width: 450px;">
+            <div class="modal-overlay" id="confirmModal" style="display: flex !important; z-index: 10001 !important;">
+                <div class="modal-content confirm-modal-content" style="max-width: 450px !important;">
                     <button class="close-modal" id="confirmModalClose">✕</button>
                     <div class="confirm-modal-body">
                         <h3 class="confirm-modal-title">${message}</h3>
@@ -798,24 +798,36 @@ function showConfirm(message, options = {}) {
         const cancelBtn = document.getElementById('modalCancelBtn');
         const closeBtn = document.getElementById('confirmModalClose');
 
+        // Forçar display do modal
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.style.opacity = '1';
+        }
+
         const closeModal = (result) => {
-            modal.style.animation = 'fadeOut 0.2s ease forwards';
-            setTimeout(() => { 
-                modal.remove(); 
-                resolve(result); 
-            }, 200);
+            if (modal) {
+                modal.style.animation = 'fadeOut 0.2s ease forwards';
+                setTimeout(() => { 
+                    modal.remove(); 
+                    resolve(result); 
+                }, 200);
+            } else {
+                resolve(result);
+            }
         };
 
-        confirmBtn.addEventListener('click', () => closeModal(true));
-        cancelBtn.addEventListener('click', () => closeModal(false));
-        closeBtn.addEventListener('click', () => closeModal(false));
+        if (confirmBtn) confirmBtn.addEventListener('click', () => closeModal(true));
+        if (cancelBtn) cancelBtn.addEventListener('click', () => closeModal(false));
+        if (closeBtn) closeBtn.addEventListener('click', () => closeModal(false));
         
         // Fechar ao clicar fora do modal
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal(false);
-            }
-        });
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(false);
+                }
+            });
+        }
 
         if (!document.querySelector('#modalAnimations')) {
             const style = document.createElement('style');
