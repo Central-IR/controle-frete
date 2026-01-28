@@ -1003,6 +1003,67 @@ button.small {
     animation: scaleIn 0.2s ease forwards;
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+/* Modal de Confirmação Específico */
+.confirm-modal-content {
+    max-width: 500px !important;
+    padding: 2rem 2rem 1.5rem 2rem !important;
+}
+
+.confirm-modal-body {
+    padding: 1rem 0 1.5rem 0;
+    text-align: center;
+}
+
+.confirm-modal-title {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin: 0;
+}
+
+.confirm-modal-actions button {
+    flex: 1;
+    max-width: 150px;
+    margin: 0 !important;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.confirm-modal-content .close-modal {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.confirm-modal-content .close-modal:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+    transform: none;
 }
 
 @keyframes scaleIn {
