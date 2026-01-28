@@ -106,7 +106,7 @@ window.handleDeleteClick = async function(id) {
         // Verificar se showConfirm existe
         if (typeof window.showConfirm !== 'function') {
             console.error('❌ showConfirm não está definido!');
-            const confirmar = confirm(`Tem certeza que deseja excluir a NF ${numeroNF}?`);
+            const confirmar = confirm(`Tem certeza que deseja excluir esta NF?`);
             if (!confirmar) return;
         } else {
             console.log('✅ Abrindo modal de confirmação...');
