@@ -159,10 +159,14 @@ window.handleCheckboxChange = async function(id) {
     if (novoStatus === 'ENTREGUE' && !frete.data_entrega) {
         const hoje = new Date();
         updateData.data_entrega = hoje.toISOString().split('T')[0];
+        console.log(`📅 Definindo data_entrega: ${updateData.data_entrega}`);
     }
     
-    // Se está desmarcando (voltando para EM_TRANSITO), manter a data_entrega existente
-    // A data só será removida se o usuário editar manualmente
+    // Se está desmarcando (voltando para EM_TRANSITO), REMOVE a data_entrega
+    if (novoStatus === 'EM_TRANSITO') {
+        updateData.data_entrega = null;
+        console.log('🗑️ Removendo data_entrega (desmarcado)');
+    }
     
     if (isOnline || DEVELOPMENT_MODE) {
         try {
@@ -186,6 +190,8 @@ window.handleCheckboxChange = async function(id) {
                 
                 if (novoStatus === 'ENTREGUE') {
                     showToast(`NF ${savedData.numero_nf} Entregue`, 'success');
+                } else {
+                    showToast(`NF ${savedData.numero_nf} desmarcado - voltou ao monitoramento`, 'info');
                 }
                 
                 updateDashboard();
