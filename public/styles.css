@@ -631,20 +631,19 @@ button.small {
     text-align: center;
 }
 
-/* MODAL DE EXCLUSÃO - AJUSTE APENAS DO ESPAÇAMENTO */
 .modal-delete {
     position: relative;
-    padding: 3rem 2.5rem 2.5rem 2.5rem;
+    padding: 2.5rem 2rem 2rem 2rem;
 }
 
 .modal-delete .close-modal {
     position: absolute;
-    top: 1.25rem;
-    right: 1.25rem;
+    top: 1rem;
+    right: 1rem;
 }
 
 .modal-message-delete {
-    margin: 0 0 2.5rem 0;
+    margin: 2rem 0 2.5rem 0;
     color: var(--text-primary);
     font-size: 1.25rem;
     line-height: 1.6;
