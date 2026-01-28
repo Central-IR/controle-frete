@@ -961,7 +961,7 @@ button.small {
 }
 
 /* ============================================
-   MODAL
+   MODAL - AJUSTES PARA MAIOR TAMANHO
    ============================================ */
 .modal-overlay {
     display: none;
@@ -995,11 +995,12 @@ button.small {
     }
 }
 
+/* MODAIS MAIORES - LARGURA AUMENTADA */
 .modal-content {
     background: var(--bg-card);
     border-radius: 16px;
     padding: 2rem;
-    max-width: 420px !important;
+    max-width: 900px !important;
     width: 95%;
     max-height: 90vh;
     overflow-y: auto;
@@ -1010,7 +1011,7 @@ button.small {
 }
 
 .modal-content.large {
-    max-width: 1000px !important;
+    max-width: 1200px !important;
 }
 
 /* ============================================
@@ -1637,6 +1638,7 @@ button.small {
     .modal-content {
         padding: 1.5rem;
         width: 95%;
+        max-width: 95% !important;
     }
     
     .modal-actions {
