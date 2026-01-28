@@ -113,7 +113,7 @@ window.handleDeleteClick = async function(id) {
             
             // Usar modal de confirmação personalizado
             const confirmar = await window.showConfirm(
-                `Tem certeza que deseja excluir a NF ${numeroNF}?`,
+                `Tem certeza que deseja excluir esta NF?`,
                 {
                     title: 'Confirmar Exclusão',
                     confirmText: 'Sim',
