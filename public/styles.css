@@ -1047,9 +1047,9 @@ button.small {
     display: flex !important;
     gap: 0.75rem !important;
     justify-content: center !important;
-    border-top: 2px solid var(--border-color) !important;
-    padding-top: 1.5rem !important;
-    margin-top: 1.5rem !important;
+    border-top: none !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
 }
 
 .confirm-modal-actions button {
