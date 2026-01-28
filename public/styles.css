@@ -1014,49 +1014,48 @@ button.small {
 }
 
 /* ============================================
-   MODAL DE CONFIRMAÇÃO - LAYOUT CORRIGIDO
+   MODAL DE CONFIRMAÇÃO/EXCLUSÃO - IDÊNTICO À TABELA DE PREÇOS
    ============================================ */
 .confirm-modal-content {
     position: relative;
-    padding: 3rem 2.5rem 2.5rem 2.5rem !important;
-    max-width: 450px !important;
+    padding: 2.5rem 2rem 2rem 2rem !important;
+    max-width: 420px !important;
 }
 
 .confirm-modal-content .close-modal {
     position: absolute;
-    top: 1.25rem;
-    right: 1.25rem;
+    top: 1rem;
+    right: 1rem;
 }
 
 .confirm-modal-body {
-    margin: 0 0 2.5rem 0 !important;
+    margin: 2rem 0 2.5rem 0 !important;
     padding: 0 !important;
 }
 
 .confirm-modal-title {
     color: var(--text-primary);
-    font-size: 1.1rem !important;
+    font-size: 1.25rem !important;
     line-height: 1.6 !important;
     text-align: center;
-    font-weight: 400 !important;
+    font-weight: 500 !important;
     margin: 0 !important;
     padding: 0 !important;
 }
 
 .confirm-modal-actions {
     display: flex !important;
-    gap: 1rem !important;
+    gap: 0.75rem !important;
     justify-content: center !important;
-    border-top: none !important;
-    padding-top: 0 !important;
-    margin-top: 0 !important;
+    border-top: 2px solid var(--border-color) !important;
+    padding-top: 1.5rem !important;
+    margin-top: 1.5rem !important;
 }
 
 .confirm-modal-actions button {
     margin: 0 !important;
-    min-width: 110px !important;
-    max-width: 130px !important;
-    padding: 11px 20px !important;
+    min-width: 120px !important;
+    padding: 12px 24px !important;
     font-size: 0.95rem !important;
     font-weight: 600 !important;
 }
