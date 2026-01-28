@@ -1013,43 +1013,51 @@ button.small {
     max-width: 1000px !important;
 }
 
-/* Modal de Exclusão/Confirmação - EXATO DA TABELA DE PREÇOS */
-.modal-delete {
+/* ============================================
+   MODAL DE CONFIRMAÇÃO - LAYOUT CORRIGIDO
+   ============================================ */
+.confirm-modal-content {
     position: relative;
-    padding: 2.5rem 2rem 2rem 2rem !important;
+    padding: 3rem 2.5rem 2.5rem 2.5rem !important;
+    max-width: 450px !important;
 }
 
-.modal-delete .close-modal {
+.confirm-modal-content .close-modal {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 1.25rem;
+    right: 1.25rem;
 }
 
-.modal-message-delete {
-    margin: 2.5rem 1.5rem 2rem 1.5rem !important;
-    color: var(--text-primary);
-    font-size: 1.05rem !important;
-    line-height: 1.5 !important;
-    text-align: center;
-    font-weight: 400 !important;
+.confirm-modal-body {
+    margin: 0 0 2.5rem 0 !important;
     padding: 0 !important;
 }
 
-.modal-actions-no-border {
+.confirm-modal-title {
+    color: var(--text-primary);
+    font-size: 1.1rem !important;
+    line-height: 1.6 !important;
+    text-align: center;
+    font-weight: 400 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.confirm-modal-actions {
     display: flex !important;
-    gap: 0.6rem !important;
+    gap: 1rem !important;
     justify-content: center !important;
     border-top: none !important;
     padding-top: 0 !important;
-    margin-top: 0.75rem !important;
+    margin-top: 0 !important;
 }
 
-.modal-actions-no-border button {
+.confirm-modal-actions button {
     margin: 0 !important;
-    min-width: 100px !important;
-    max-width: 120px !important;
-    padding: 9px 18px !important;
-    font-size: 0.9rem !important;
+    min-width: 110px !important;
+    max-width: 130px !important;
+    padding: 11px 20px !important;
+    font-size: 0.95rem !important;
     font-weight: 600 !important;
 }
 
