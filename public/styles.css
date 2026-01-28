@@ -983,6 +983,12 @@ button.small {
     display: flex;
 }
 
+/* Modal de Confirmação - Forçar Exibição */
+#confirmModal {
+    display: flex !important;
+    opacity: 1 !important;
+}
+
 @keyframes fadeIn {
     to {
         opacity: 1;
