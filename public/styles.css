@@ -999,7 +999,7 @@ button.small {
     background: var(--bg-card);
     border-radius: 16px;
     padding: 2rem;
-    max-width: 900px;
+    max-width: 420px !important;
     width: 95%;
     max-height: 90vh;
     overflow-y: auto;
@@ -1007,69 +1007,50 @@ button.small {
     border: 1px solid var(--border-color);
     transform: scale(0.9);
     animation: scaleIn 0.2s ease forwards;
-    display: flex;
-    flex-direction: column;
+}
+
+.modal-content.large {
+    max-width: 1000px !important;
+}
+
+/* Modal de Exclusão/Confirmação - EXATO DA TABELA DE PREÇOS */
+.modal-delete {
     position: relative;
+    padding: 2.5rem 2rem 2rem 2rem !important;
 }
 
-/* Modal de Confirmação Específico */
-.confirm-modal-content {
-    max-width: 500px !important;
-    padding: 2rem 2rem 1.5rem 2rem !important;
-}
-
-.confirm-modal-body {
-    padding: 1rem 0 1.5rem 0;
-    text-align: center;
-}
-
-.confirm-modal-title {
-    font-size: 1.15rem;
-    font-weight: 500;
-    color: var(--text-primary);
-    line-height: 1.6;
-    margin: 0;
-}
-
-.confirm-modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: center;
-    margin: 0;
-}
-
-.confirm-modal-actions button {
-    flex: 1;
-    max-width: 150px;
-    margin: 0 !important;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-}
-
-.confirm-modal-content .close-modal {
+.modal-delete .close-modal {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 0.25rem;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: all 0.2s ease;
 }
 
-.confirm-modal-content .close-modal:hover {
-    background: rgba(0, 0, 0, 0.05);
+.modal-message-delete {
+    margin: 2.5rem 1.5rem 2rem 1.5rem !important;
     color: var(--text-primary);
-    transform: none;
+    font-size: 1.05rem !important;
+    line-height: 1.5 !important;
+    text-align: center;
+    font-weight: 400 !important;
+    padding: 0 !important;
+}
+
+.modal-actions-no-border {
+    display: flex !important;
+    gap: 0.6rem !important;
+    justify-content: center !important;
+    border-top: none !important;
+    padding-top: 0 !important;
+    margin-top: 0.75rem !important;
+}
+
+.modal-actions-no-border button {
+    margin: 0 !important;
+    min-width: 100px !important;
+    max-width: 120px !important;
+    padding: 9px 18px !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
 }
 
 @keyframes scaleIn {
@@ -1324,20 +1305,35 @@ button.small {
 
 .close-modal {
     background: transparent !important;
-    border: none;
+    border: none !important;
     font-size: 1.5rem;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 0;
-    margin: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     width: 32px;
     height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: color 0.2s ease;
+    box-shadow: none !important;
 }
 
 .close-modal:hover {
     color: var(--text-primary);
     background: transparent !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.close-modal:active {
+    background: transparent !important;
+}
+
+.close-modal:focus {
+    background: transparent !important;
+    outline: none;
 }
 
 .close-modal:active {
