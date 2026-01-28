@@ -87,10 +87,29 @@ window.handleEditClick = function(id) {
     showFormModal(String(id));
 };
 
-window.handleDeleteClick = function(id) {
+window.handleDeleteClick = async function(id) {
     console.log('🗑️ Tentando excluir frete:', id);
     
-    const confirmar = confirm('Tem certeza que deseja excluir este frete?');
+    const idStr = String(id);
+    const freteToDelete = fretes.find(f => String(f.id) === idStr);
+    
+    if (!freteToDelete) {
+        showToast('Frete não encontrado!', 'error');
+        return;
+    }
+    
+    const numeroNF = freteToDelete.numero_nf || 'sem número';
+    
+    // Usar modal de confirmação personalizado
+    const confirmar = await showConfirm(
+        `Tem certeza que deseja excluir a NF ${numeroNF}?`,
+        {
+            title: 'Confirmar Exclusão',
+            confirmText: 'Sim',
+            cancelText: 'Cancelar',
+            type: 'danger'
+        }
+    );
     
     if (!confirmar) {
         console.log('❌ Exclusão cancelada pelo usuário');
@@ -98,19 +117,16 @@ window.handleDeleteClick = function(id) {
     }
     
     console.log('✅ Usuário confirmou exclusão');
-    
-    const idStr = String(id);
-    const deletedFrete = fretes.find(f => String(f.id) === idStr);
-    const numeroNF = deletedFrete ? deletedFrete.numero_nf : '';
-    
     console.log('🗑️ Deletando NF:', numeroNF);
     
+    // Remover da lista local primeiro
     fretes = fretes.filter(f => String(f.id) !== idStr);
     updateAllFilters();
     updateDashboard();
     filterFretes();
     showToast(`NF ${numeroNF} Excluído`, 'success');
     
+    // Deletar no servidor
     if (isOnline || DEVELOPMENT_MODE) {
         fetch(`${API_URL}/fretes/${idStr}`, {
             method: 'DELETE',
@@ -126,8 +142,9 @@ window.handleDeleteClick = function(id) {
         })
         .catch(error => {
             console.error('❌ Erro ao deletar no servidor:', error);
-            if (deletedFrete) {
-                fretes.push(deletedFrete);
+            // Restaurar o frete se falhar no servidor
+            if (freteToDelete) {
+                fretes.push(freteToDelete);
                 updateAllFilters();
                 updateDashboard();
                 filterFretes();
@@ -746,15 +763,14 @@ function showConfirm(message, options = {}) {
 
         const modalHTML = `
             <div class="modal-overlay" id="confirmModal" style="z-index: 10001;">
-                <div class="modal-content" style="max-width: 450px;">
-                    <div class="modal-header">
-                        <h3 class="modal-title">${title}</h3>
-                        <button class="close-modal" onclick="document.getElementById('confirmModal').remove();">✕</button>
+                <div class="modal-content confirm-modal-content" style="max-width: 450px;">
+                    <button class="close-modal" id="confirmModalClose">✕</button>
+                    <div class="confirm-modal-body">
+                        <h3 class="confirm-modal-title">${message}</h3>
                     </div>
-                    <p style="margin: 1.5rem 0; color: var(--text-primary); font-size: 1rem; line-height: 1.6;">${message}</p>
-                    <div class="modal-actions">
+                    <div class="modal-actions confirm-modal-actions">
+                        <button class="${type === 'danger' ? 'danger' : 'success'}" id="modalConfirmBtn">${confirmText}</button>
                         <button class="secondary" id="modalCancelBtn">${cancelText}</button>
-                        <button class="${type === 'warning' ? 'danger' : 'success'}" id="modalConfirmBtn">${confirmText}</button>
                     </div>
                 </div>
             </div>
@@ -764,6 +780,7 @@ function showConfirm(message, options = {}) {
         const modal = document.getElementById('confirmModal');
         const confirmBtn = document.getElementById('modalConfirmBtn');
         const cancelBtn = document.getElementById('modalCancelBtn');
+        const closeBtn = document.getElementById('confirmModalClose');
 
         const closeModal = (result) => {
             modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -775,6 +792,7 @@ function showConfirm(message, options = {}) {
 
         confirmBtn.addEventListener('click', () => closeModal(true));
         cancelBtn.addEventListener('click', () => closeModal(false));
+        closeBtn.addEventListener('click', () => closeModal(false));
 
         if (!document.querySelector('#modalAnimations')) {
             const style = document.createElement('style');
