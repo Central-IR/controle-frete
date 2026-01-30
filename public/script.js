@@ -992,6 +992,7 @@ window.showFormModal = function(editingId = null) {
                                         <option value="TODO BRASIL" ${frete?.transportadora === 'TODO BRASIL' ? 'selected' : ''}>TODO BRASIL</option>
                                         <option value="AZURE" ${frete?.transportadora === 'AZURE' ? 'selected' : ''}>AZURE</option>
                                         <option value="RODONAVES" ${frete?.transportadora === 'RODONAVES' ? 'selected' : ''}>RODONAVES</option>
+                                        <option value="FAVORITA" ${frete?.transportadora === 'FAVORITA' ? 'selected' : ''}>FAVORITA</option>
                                         <option value="ENTREGA PRÓPRIA" ${frete?.transportadora === 'ENTREGA PRÓPRIA' ? 'selected' : ''}>ENTREGA PRÓPRIA</option>
                                         <option value="DIRETO PELO FORNECEDOR" ${frete?.transportadora === 'DIRETO PELO FORNECEDOR' ? 'selected' : ''}>DIRETO PELO FORNECEDOR</option>
                                     </select>
