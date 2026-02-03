@@ -752,13 +752,13 @@ function renderizarGrafico() {
                     <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--text-primary);">${mes.nome}</h4>
                     <div style="margin-bottom: 0.5rem;">
                         <div style="font-size: 0.85rem; color: var(--text-secondary);">Valor Total</div>
-                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center;">
+                        <div style="font-size: 1rem; font-weight: 700; color: #22C55E; display: flex; align-items: center;">
                             R$ ${mes.valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${totalTendencia}
                         </div>
                     </div>
                     <div>
                         <div style="font-size: 0.85rem; color: var(--text-secondary);">Frete</div>
-                        <div style="font-size: 1rem; font-weight: 700; color: #F59E0B; display: flex; align-items: center;">
+                        <div style="font-size: 1rem; font-weight: 700; color: #3B82F6; display: flex; align-items: center;">
                             R$ ${mes.valorFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${freteTendencia}
                         </div>
                     </div>
@@ -776,13 +776,13 @@ function renderizarGrafico() {
         </div>
         
         <div style="display: flex; gap: 1rem; justify-content: center; max-width: 800px; margin: 0 auto;">
-            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: var(--bg-card); border: 1px solid rgba(107, 114, 128, 0.2); border-radius: 8px;">
+            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
                 <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Valor</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #22C55E;">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
-            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
                 <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Frete</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #F59E0B;">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #3B82F6;">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
         </div>
     `;
