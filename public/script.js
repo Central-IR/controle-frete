@@ -767,7 +767,7 @@ function renderizarGrafico() {
             }).join('')}
         </div>
         
-        <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; border-top: 1px solid rgba(107, 114, 128, 0.2); border-bottom: 1px solid rgba(107, 114, 128, 0.2);">
+        <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem;">
             <button onclick="changeGraficoPagina(-1)" ${graficoPagina === 1 ? 'disabled' : ''} 
                     style="padding: 8px 16px; border: 1px solid rgba(107, 114, 128, 0.2); background: var(--bg-card); cursor: pointer; border-radius: 4px; font-weight: 600; color: var(--text-primary);">‹</button>
             <span style="font-weight: 600;">${graficoPagina}</span>
