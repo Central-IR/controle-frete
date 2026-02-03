@@ -722,7 +722,7 @@ function renderizarGrafico() {
     if (!container) return;
     
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
             ${mesesPagina.map((mes, indexPagina) => {
                 const mesIndex = inicio + indexPagina;
                 const mesAnterior = mesIndex > 0 ? dadosPorMes[mesIndex - 1] : null;
@@ -748,17 +748,17 @@ function renderizarGrafico() {
                 }
                 
                 return `
-                <div style="padding: 1rem; background: var(--bg-card); border: 1px solid rgba(107, 114, 128, 0.2); border-radius: 8px;">
-                    <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--text-primary);">${mes.nome}</h4>
-                    <div style="margin-bottom: 0.5rem;">
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Valor Total</div>
-                        <div style="font-size: 1rem; font-weight: 700; color: #22C55E; display: flex; align-items: center;">
+                <div style="padding: 0.75rem; background: var(--bg-card); border: 1px solid rgba(107, 114, 128, 0.2); border-radius: 8px;">
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: var(--text-primary);">${mes.nome}</h4>
+                    <div style="margin-bottom: 0.4rem;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Valor Total</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #22C55E; display: flex; align-items: center;">
                             R$ ${mes.valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${totalTendencia}
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Frete</div>
-                        <div style="font-size: 1rem; font-weight: 700; color: #3B82F6; display: flex; align-items: center;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Frete</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #3B82F6; display: flex; align-items: center;">
                             R$ ${mes.valorFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${freteTendencia}
                         </div>
                     </div>
@@ -767,22 +767,22 @@ function renderizarGrafico() {
             }).join('')}
         </div>
         
-        <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem;">
+        <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 0.5rem;">
             <button onclick="changeGraficoPagina(-1)" ${graficoPagina === 1 ? 'disabled' : ''} 
-                    style="padding: 8px 16px; border: 1px solid rgba(107, 114, 128, 0.2); background: var(--bg-card); cursor: pointer; border-radius: 4px; font-weight: 600; color: var(--text-primary);">‹</button>
+                    style="padding: 6px 14px; border: 1px solid rgba(107, 114, 128, 0.2); background: var(--bg-card); cursor: pointer; border-radius: 4px; font-weight: 600; color: var(--text-primary);">‹</button>
             <span style="font-weight: 600;">${graficoPagina}</span>
             <button onclick="changeGraficoPagina(1)" ${graficoPagina === totalPaginas ? 'disabled' : ''}
-                    style="padding: 8px 16px; border: 1px solid rgba(107, 114, 128, 0.2); background: var(--bg-card); cursor: pointer; border-radius: 4px; font-weight: 600; color: var(--text-primary);">›</button>
+                    style="padding: 6px 14px; border: 1px solid rgba(107, 114, 128, 0.2); background: var(--bg-card); cursor: pointer; border-radius: 4px; font-weight: 600; color: var(--text-primary);">›</button>
         </div>
         
         <div style="display: flex; gap: 1rem; justify-content: center; max-width: 800px; margin: 0 auto;">
-            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
-                <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Valor</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #22C55E;">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 0.75rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Total Valor</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: #22C55E;">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
-            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Frete</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #3B82F6;">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Total Frete</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: #3B82F6;">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
         </div>
     `;
