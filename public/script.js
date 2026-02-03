@@ -649,8 +649,11 @@ function updateDashboard() {
 // ============================================
 // MODAL DASHBOARDS MENSAIS
 // ============================================
+let graficoPagina = 1;
+
 window.showGraficoModal = function() {
     graficoYear = currentMonth.getFullYear();
+    graficoPagina = 1;
     
     const graficoModal = document.getElementById('graficoModal');
     if (graficoModal) {
@@ -673,101 +676,120 @@ window.closeGraficoModal = function() {
 
 window.changeGraficoYear = function(direction) {
     graficoYear += direction;
+    graficoPagina = 1;
+    renderizarGrafico();
+};
+
+window.changeGraficoPagina = function(direction) {
+    graficoPagina += direction;
     renderizarGrafico();
 };
 
 function renderizarGrafico() {
     document.getElementById('graficoYear').textContent = graficoYear;
     
-    const dadosMensais = [];
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     
-    for (let i = 0; i < 12; i++) {
+    // Calcular dados por mês
+    const dadosPorMes = months.map((nome, index) => {
         const fretesDoMes = fretes.filter(f => {
             const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
             const isTipoEnvio = !f.tipo_nf || f.tipo_nf === 'ENVIO';
-            return dataEmissao.getMonth() === i && 
+            return dataEmissao.getMonth() === index && 
                    dataEmissao.getFullYear() === graficoYear &&
                    isTipoEnvio;
         });
         
         const valorFrete = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_frete || 0), 0);
-        const valorNF = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
+        const valorTotal = fretesDoMes.reduce((sum, f) => sum + parseFloat(f.valor_nf || 0), 0);
         
-        dadosMensais.push({
-            mes: meses[i],
-            mesAbrev: mesesAbrev[i],
-            frete: valorFrete,
-            valor: valorNF
-        });
-    }
+        return { nome, valorFrete, valorTotal };
+    });
     
-    const totalFrete = dadosMensais.reduce((sum, m) => sum + m.frete, 0);
-    const totalValor = dadosMensais.reduce((sum, m) => sum + m.valor, 0);
+    // Paginação - 3 meses por página
+    const mesesPorPagina = 3;
+    const totalPaginas = Math.ceil(dadosPorMes.length / mesesPorPagina);
+    const inicio = (graficoPagina - 1) * mesesPorPagina;
+    const fim = inicio + mesesPorPagina;
+    const mesesPagina = dadosPorMes.slice(inicio, fim);
     
-    document.getElementById('graficoValorTotal').textContent = 
-        `R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    document.getElementById('graficoFreteTotal').textContent = 
-        `R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    // Calcular totais gerais do ano inteiro
+    const totalFrete = dadosPorMes.reduce((sum, m) => sum + m.valorFrete, 0);
+    const totalValor = dadosPorMes.reduce((sum, m) => sum + m.valorTotal, 0);
     
-    renderizarDashboards(dadosMensais);
-}
-
-function renderizarDashboards(dadosMensais) {
     const container = document.getElementById('dashboardsContainer');
     if (!container) return;
     
-    const primeirosSeis = dadosMensais.slice(0, 6);
-    const ultimosSeis = dadosMensais.slice(6, 12);
-    
-    const gerarDashboard = (mesData, index) => {
-        let pushClass = 'push-gray';
-        
-        // Janeiro sempre tem push cinza
-        if (index === 0) {
-            pushClass = 'push-gray';
-        }
-        // Mês com valor zerado tem push cinza
-        else if (mesData.valor === 0) {
-            pushClass = 'push-gray';
-        }
-        // Comparar com mês anterior
-        else {
-            const mesAnterior = dadosMensais[index - 1];
-            if (mesData.valor > mesAnterior.valor) {
-                pushClass = 'push-green';
-            } else if (mesData.valor < mesAnterior.valor) {
-                pushClass = 'push-red';
-            } else {
-                pushClass = 'push-gray';
-            }
-        }
-        
-        return `
-            <div class="dashboard-mes-card">
-                <div class="dashboard-push ${pushClass}"></div>
-                <div class="dashboard-mes-nome">${mesData.mesAbrev}</div>
-                <div class="dashboard-mes-valores">
-                    <div class="dashboard-valor-item">
-                        <span class="dashboard-valor-label">Valor</span>
-                        <span class="dashboard-valor-num valor-total-color">R$ ${mesData.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            ${mesesPagina.map((mes, indexPagina) => {
+                const mesIndex = inicio + indexPagina;
+                const mesAnterior = mesIndex > 0 ? dadosPorMes[mesIndex - 1] : null;
+                
+                // Calcular tendências
+                let freteTendencia = '';
+                let totalTendencia = '';
+                
+                if (mesAnterior) {
+                    // Tendência Frete
+                    if (mes.valorFrete > mesAnterior.valorFrete) {
+                        freteTendencia = '<span style="color: #22C55E; font-size: 1.2rem; margin-left: 0.25rem;">▲</span>';
+                    } else if (mes.valorFrete < mesAnterior.valorFrete) {
+                        freteTendencia = '<span style="color: #EF4444; font-size: 1.2rem; margin-left: 0.25rem;">▼</span>';
+                    }
+                    
+                    // Tendência Valor Total
+                    if (mes.valorTotal > mesAnterior.valorTotal) {
+                        totalTendencia = '<span style="color: #22C55E; font-size: 1.2rem; margin-left: 0.25rem;">▲</span>';
+                    } else if (mes.valorTotal < mesAnterior.valorTotal) {
+                        totalTendencia = '<span style="color: #EF4444; font-size: 1.2rem; margin-left: 0.25rem;">▼</span>';
+                    }
+                }
+                
+                return `
+                <div style="padding: 1rem; background: var(--bg-card); border: 1px solid rgba(107, 114, 128, 0.2); border-radius: 8px;">
+                    <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--text-primary);">${mes.nome}</h4>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Valor Total</div>
+                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center;">
+                            R$ ${mes.valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${totalTendencia}
+                        </div>
                     </div>
-                    <div class="dashboard-valor-item">
-                        <span class="dashboard-valor-label">Frete</span>
-                        <span class="dashboard-valor-num frete-color">R$ ${mesData.frete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    <div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Frete</div>
+                        <div style="font-size: 1rem; font-weight: 700; color: #F59E0B; display: flex; align-items: center;">
+                            R$ ${mes.valorFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${freteTendencia}
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-    };
-    
-    container.innerHTML = `
-        <div class="dashboard-semestre">
-            ${primeirosSeis.map((m, idx) => gerarDashboard(m, idx)).join('')}
+            `;
+            }).join('')}
         </div>
-        <div class="dashboard-semestre">
-            ${ultimosSeis.map((m, idx) => gerarDashboard(m, idx + 6)).join('')}
+        
+        <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; border-top: 1px solid rgba(107, 114, 128, 0.2); border-bottom: 1px solid rgba(107, 114, 128, 0.2);">
+            <button onclick="changeGraficoPagina(-1)" ${graficoPagina === 1 ? 'disabled' : ''} 
+                    style="padding: 8px 16px; border: 1px solid rgba(107, 114, 128, 0.2); background: var(--bg-card); cursor: pointer; border-radius: 4px; font-weight: 600; color: var(--text-primary);">‹</button>
+            <span style="font-weight: 600;">${graficoPagina}</span>
+            <button onclick="changeGraficoPagina(1)" ${graficoPagina === totalPaginas ? 'disabled' : ''}
+                    style="padding: 8px 16px; border: 1px solid rgba(107, 114, 128, 0.2); background: var(--bg-card); cursor: pointer; border-radius: 4px; font-weight: 600; color: var(--text-primary);">›</button>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: center; max-width: 800px; margin: 0 auto;">
+            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: var(--bg-card); border: 1px solid rgba(107, 114, 128, 0.2); border-radius: 8px;">
+                <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Valor</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            </div>
+            <div style="flex: 0 1 auto; min-width: 250px; text-align: center; padding: 1rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Frete</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #F59E0B;">R$ ${totalFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            </div>
         </div>
     `;
+}
+
+function renderizarDashboards(dadosMensais) {
+    // Função removida - agora integrada em renderizarGrafico
 }
 
 // ============================================
