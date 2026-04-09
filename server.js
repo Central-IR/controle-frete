@@ -2,17 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ============================================
-// MIDDLEWARE
-// ============================================
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================
 // SUPABASE CLIENT
@@ -66,9 +63,8 @@ async function authMiddleware(req, res, next) {
 // HEALTH CHECK (sem autenticação)
 // ============================================
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
 // ============================================
 // ROTAS DE TRANSPORTADORAS
 // ============================================
@@ -407,7 +403,7 @@ app.get('*', (req, res) => {
 // START SERVER
 // ============================================
 app.listen(port, () => {
-  console.log(`✅ Servidor rodando na porta ${port}`);
+    console.log(`✅ Servidor rodando na porta ${port}`);
   console.log(`📍 API disponível em http://localhost:${port}/api`);
   console.log(`🔧 Modo desenvolvimento: ${process.env.DEVELOPMENT_MODE === 'true'}`);
 });
