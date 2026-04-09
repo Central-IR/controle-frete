@@ -3,15 +3,9 @@
 // ============================================
 const DEVELOPMENT_MODE = false;
 const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
-
-// API_URL automático: usa a mesma origem quando rodando no próprio servidor,
-// evitando o problema de apontar para URL errada.
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? `${window.location.protocol}//${window.location.host}/api`
-    : 'https://controle-frete.onrender.com/api';
+const API_URL = 'https://controle-frete.onrender.com/api';
 
 let fretes = [];
-let transportadoras = [];
 let isOnline = false;
 let lastDataHash = '';
 let sessionToken = null;
@@ -25,14 +19,6 @@ const meses = [
 ];
 
 const mesesAbrev = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-
-// Lista de fallback caso a API de transportadoras falhe
-const TRANSPORTADORAS_FALLBACK = [
-    'TNT MERCÚRIO', 'BRASPRESS', 'CORREIOS', 'JAMEF', 'GENEROSO',
-    'MOVVI', 'TG TRANSPORTES', 'BROSLOG', 'FAVORITA TRANSPORTES',
-    'SNT LOG LTDA', 'TRANSLOVATO', 'TODO BRASIL', 'AZURE',
-    'RODONAVES', 'TOTAL EXPRESS', 'ENTREGA PRÓPRIA', 'DIRETO PELO FORNECEDOR'
-];
 
 console.log('✅ Controle de Frete iniciado');
 console.log('📍 API URL:', API_URL);
@@ -59,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventDelegation() {
     console.log('🔧 Configurando Event Delegation...');
     
+    // Listener para checkboxes via event delegation
     document.body.addEventListener('change', function(e) {
         if (e.target.type === 'checkbox' && e.target.classList.contains('styled-checkbox')) {
             const row = e.target.closest('tr[data-id]');
@@ -116,6 +103,7 @@ window.handleDeleteClick = async function(id) {
         const numeroNF = freteToDelete.numero_nf || 'sem número';
         console.log('📋 Frete encontrado - NF:', numeroNF);
         
+        // Verificar se showConfirm existe
         if (typeof window.showConfirm !== 'function') {
             console.error('❌ showConfirm não está definido!');
             const confirmar = confirm(`Tem certeza que deseja excluir esta NF?`);
@@ -123,6 +111,7 @@ window.handleDeleteClick = async function(id) {
         } else {
             console.log('✅ Abrindo modal de confirmação...');
             
+            // Usar modal de confirmação personalizado
             const confirmar = await window.showConfirm(
                 `Tem certeza que deseja excluir esta NF?`,
                 {
@@ -142,12 +131,14 @@ window.handleDeleteClick = async function(id) {
         console.log('✅ Usuário confirmou exclusão');
         console.log('🗑️ Deletando NF:', numeroNF);
         
+        // Remover da lista local primeiro
         fretes = fretes.filter(f => String(f.id) !== idStr);
         updateAllFilters();
         updateDashboard();
         filterFretes();
         showToast(`NF ${numeroNF} Excluído`, 'success');
         
+        // Deletar no servidor
         if (isOnline || DEVELOPMENT_MODE) {
             fetch(`${API_URL}/fretes/${idStr}`, {
                 method: 'DELETE',
@@ -163,6 +154,7 @@ window.handleDeleteClick = async function(id) {
             })
             .catch(error => {
                 console.error('❌ Erro ao deletar no servidor:', error);
+                // Restaurar o frete se falhar no servidor
                 if (freteToDelete) {
                     fretes.push(freteToDelete);
                     updateAllFilters();
@@ -193,14 +185,17 @@ window.handleCheckboxChange = async function(id) {
     
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
     
+    // Preparar dados para atualização
     const updateData = { status: novoStatus };
     
+    // Se está marcando como ENTREGUE e não tem data_entrega, define a data atual
     if (novoStatus === 'ENTREGUE' && !frete.data_entrega) {
         const hoje = new Date();
         updateData.data_entrega = hoje.toISOString().split('T')[0];
         console.log(`📅 Definindo data_entrega: ${updateData.data_entrega}`);
     }
     
+    // Se está desmarcando (voltando para EM_TRANSITO), REMOVE a data_entrega
     if (novoStatus === 'EM_TRANSITO') {
         updateData.data_entrega = null;
         console.log('🗑️ Removendo data_entrega (desmarcado)');
@@ -391,14 +386,10 @@ function verificarAutenticacao() {
 
 function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
     document.body.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0f0f0f;color:#f1f1f1;text-align:center;padding:2rem;font-family:sans-serif;">
-            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" style="margin-bottom:1.5rem"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <h1 style="font-size:1.8rem;margin:0 0 0.75rem;color:#ef4444;">${mensagem}</h1>
-            <p style="color:#9ca3af;margin:0 0 2rem;max-width:380px;line-height:1.6;">
-                Acesse o <strong style="color:#f1f1f1;">Portal I.R. Comércio</strong> e abra o módulo
-                <strong style="color:#f1f1f1;">Controle de Frete</strong> a partir de lá.
-            </p>
-            <a href="${PORTAL_URL}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Ir para o Portal</a>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg-primary); color: var(--text-primary); text-align: center; padding: 2rem;">
+            <h1 style="font-size: 2.2rem; margin-bottom: 1rem;">${mensagem}</h1>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Somente usuários autenticados podem acessar esta área.</p>
+            <a href="${PORTAL_URL}" style="display: inline-block; background: var(--btn-register); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">Ir para o Portal</a>
         </div>
     `;
 }
@@ -447,7 +438,6 @@ async function checkServerStatus() {
         
         if (wasOffline && isOnline) {
             console.log('✅ Servidor ONLINE');
-            await loadTransportadoras();
             await loadFretes();
         }
         
@@ -469,49 +459,7 @@ function updateConnectionStatus() {
 }
 
 // ============================================
-// CARREGAMENTO DE TRANSPORTADORAS
-// ============================================
-async function loadTransportadoras() {
-    try {
-        console.log('🚚 Carregando transportadoras...');
-
-        const response = await fetch(`${API_URL}/transportadoras`, {
-            method: 'GET',
-            headers: {
-                'X-Session-Token': sessionToken,
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            },
-            mode: 'cors'
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Aceita tanto array de strings quanto array de objetos { nome: '...' }
-        if (Array.isArray(data)) {
-            transportadoras = data.map(item => {
-                if (typeof item === 'string') return item.trim().toUpperCase();
-                if (item.nome) return item.nome.trim().toUpperCase();
-                if (item.name) return item.name.trim().toUpperCase();
-                return String(item).trim().toUpperCase();
-            }).filter(Boolean).sort();
-        } else {
-            throw new Error('Formato de resposta inesperado');
-        }
-
-        console.log(`✅ ${transportadoras.length} transportadoras carregadas da API`);
-    } catch (error) {
-        console.warn('⚠️ Falha ao carregar transportadoras da API, usando fallback:', error.message);
-        transportadoras = [...TRANSPORTADORAS_FALLBACK];
-    }
-}
-
-// ============================================
-// CARREGAMENTO DE FRETES
+// CARREGAMENTO DE DADOS
 // ============================================
 async function loadFretes(showMessage = false) {
     if (!isOnline && !DEVELOPMENT_MODE) {
@@ -580,7 +528,6 @@ window.sincronizarDados = async function() {
     });
     
     showToast('Dados sincronizados', 'success');
-    await loadTransportadoras();
     await loadFretes(true);
     
     setTimeout(() => {
@@ -594,7 +541,7 @@ window.sincronizarDados = async function() {
 };
 
 function startPolling() {
-    loadTransportadoras().then(() => loadFretes());
+    loadFretes();
     setInterval(() => {
         if (isOnline) loadFretes();
     }, 10000);
@@ -744,6 +691,7 @@ function renderizarGrafico() {
     const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     
+    // Calcular dados por mês
     const dadosPorMes = months.map((nome, index) => {
         const fretesDoMes = fretes.filter(f => {
             const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
@@ -759,12 +707,14 @@ function renderizarGrafico() {
         return { nome, valorFrete, valorTotal };
     });
     
+    // Paginação - 3 meses por página
     const mesesPorPagina = 3;
     const totalPaginas = Math.ceil(dadosPorMes.length / mesesPorPagina);
     const inicio = (graficoPagina - 1) * mesesPorPagina;
     const fim = inicio + mesesPorPagina;
     const mesesPagina = dadosPorMes.slice(inicio, fim);
     
+    // Calcular totais gerais do ano inteiro
     const totalFrete = dadosPorMes.reduce((sum, m) => sum + m.valorFrete, 0);
     const totalValor = dadosPorMes.reduce((sum, m) => sum + m.valorTotal, 0);
     
@@ -777,16 +727,19 @@ function renderizarGrafico() {
                 const mesIndex = inicio + indexPagina;
                 const mesAnterior = mesIndex > 0 ? dadosPorMes[mesIndex - 1] : null;
                 
+                // Calcular tendências
                 let freteTendencia = '';
                 let totalTendencia = '';
                 
                 if (mesAnterior) {
+                    // Tendência Frete
                     if (mes.valorFrete > mesAnterior.valorFrete) {
                         freteTendencia = '<span style="color: #22C55E; font-size: 1.2rem; margin-left: 0.25rem;">▲</span>';
                     } else if (mes.valorFrete < mesAnterior.valorFrete) {
                         freteTendencia = '<span style="color: #EF4444; font-size: 1.2rem; margin-left: 0.25rem;">▼</span>';
                     }
                     
+                    // Tendência Valor Total
                     if (mes.valorTotal > mesAnterior.valorTotal) {
                         totalTendencia = '<span style="color: #22C55E; font-size: 1.2rem; margin-left: 0.25rem;">▲</span>';
                     } else if (mes.valorTotal < mesAnterior.valorTotal) {
@@ -835,6 +788,10 @@ function renderizarGrafico() {
     `;
 }
 
+function renderizarDashboards(dadosMensais) {
+    // Função removida - agora integrada em renderizarGrafico
+}
+
 // ============================================
 // MODAL DE CONFIRMAÇÃO
 // ============================================
@@ -863,6 +820,7 @@ function showConfirm(message, options = {}) {
         const cancelBtn = document.getElementById('modalCancelBtn');
         const closeBtn = document.getElementById('confirmModalClose');
 
+        // Forçar display do modal
         if (modal) {
             modal.style.display = 'flex';
             modal.style.opacity = '1';
@@ -884,6 +842,7 @@ function showConfirm(message, options = {}) {
         if (cancelBtn) cancelBtn.addEventListener('click', () => closeModal(false));
         if (closeBtn) closeBtn.addEventListener('click', () => closeModal(false));
         
+        // Fechar ao clicar fora do modal
         if (modal) {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -901,19 +860,8 @@ function showConfirm(message, options = {}) {
     });
 }
 
+// Exportar para window
 window.showConfirm = showConfirm;
-
-// ============================================
-// HELPER: GERAR OPTIONS DE TRANSPORTADORAS
-// ============================================
-function getTransportadorasOptions(selectedValue = '') {
-    const lista = transportadoras.length > 0 ? transportadoras : TRANSPORTADORAS_FALLBACK;
-    const options = lista.map(t => {
-        const selected = t === selectedValue ? 'selected' : '';
-        return `<option value="${t}" ${selected}>${t}</option>`;
-    }).join('');
-    return `<option value="">Selecione...</option>${options}`;
-}
 
 // ============================================
 // FORMULÁRIO COM OBSERVAÇÕES
@@ -1051,7 +999,24 @@ window.showFormModal = function(editingId = null) {
                                 <div class="form-group">
                                     <label for="transportadora">Transportadora</label>
                                     <select id="transportadora">
-                                        ${getTransportadorasOptions(frete?.transportadora || '')}
+                                        <option value="">Selecione...</option>
+                                        <option value="TNT MERCÚRIO" ${frete?.transportadora === 'TNT MERCÚRIO' ? 'selected' : ''}>TNT MERCÚRIO</option>
+                                        <option value="BRASPRESS" ${frete?.transportadora === 'BRASPRESS' ? 'selected' : ''}>BRASPRESS</option>
+                                        <option value="CORREIOS" ${frete?.transportadora === 'CORREIOS' ? 'selected' : ''}>CORREIOS</option>
+                                        <option value="JAMEF" ${frete?.transportadora === 'JAMEF' ? 'selected' : ''}>JAMEF</option>
+                                        <option value="GENEROSO" ${frete?.transportadora === 'GENEROSO' ? 'selected' : ''}>GENEROSO</option>
+                                        <option value="MOVVI" ${frete?.transportadora === 'MOVVI' ? 'selected' : ''}>MOVVI</option>
+                                        <option value="TG TRANSPORTES" ${frete?.transportadora === 'TG TRANSPORTES' ? 'selected' : ''}>TG TRANSPORTES</option>
+                                        <option value="BROSLOG" ${frete?.transportadora === 'BROSLOG' ? 'selected' : ''}>BROSLOG</option>
+                                        <option value="FAVORITA TRANSPORTES" ${frete?.transportadora === 'FAVORITA TRANSPORTES' ? 'selected' : ''}>FAVORITA TRANSPORTES</option>
+                                        <option value="SNT LOG LTDA" ${frete?.transportadora === 'SNT LOG LTDA' ? 'selected' : ''}>SNT LOG LTDA</option>
+                                        <option value="TRANSLOVATO" ${frete?.transportadora === 'TRANSLOVATO' ? 'selected' : ''}>TRANSLOVATO</option>
+                                        <option value="TODO BRASIL" ${frete?.transportadora === 'TODO BRASIL' ? 'selected' : ''}>TODO BRASIL</option>
+                                        <option value="AZURE" ${frete?.transportadora === 'AZURE' ? 'selected' : ''}>AZURE</option>
+                                        <option value="RODONAVES" ${frete?.transportadora === 'RODONAVES' ? 'selected' : ''}>RODONAVES</option>
+                                        <option value="TOTAL EXPRESS" ${frete?.transportadora === 'TOTAL EXPRESS' ? 'selected' : ''}>TOTAL EXPRESS</option>
+                                        <option value="ENTREGA PRÓPRIA" ${frete?.transportadora === 'ENTREGA PRÓPRIA' ? 'selected' : ''}>ENTREGA PRÓPRIA</option>
+                                        <option value="DIRETO PELO FORNECEDOR" ${frete?.transportadora === 'DIRETO PELO FORNECEDOR' ? 'selected' : ''}>DIRETO PELO FORNECEDOR</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1147,6 +1112,7 @@ window.adicionarObservacao = function() {
     const observacoesDataField = document.getElementById('observacoesData');
     let observacoes = JSON.parse(observacoesDataField.value || '[]');
     
+    // Adicionar username à observação
     const username = sessionStorage.getItem('username') || 'Usuário';
     
     observacoes.push({
@@ -1261,6 +1227,12 @@ window.handleSubmit = async function(event) {
         observacoes: observacoesValue
     };
 
+    // O backend vai calcular o status automaticamente baseado em:
+    // 1. tipo_nf (se for tipo especial, status = null)
+    // 2. data_entrega (se existir, status = ENTREGUE)
+    // 3. padrão (se não tiver data_entrega, status = EM_TRANSITO)
+    // Não enviamos status no formData para deixar o backend decidir
+
     const editId = document.getElementById('editId').value;
 
     if (editId) {
@@ -1336,10 +1308,10 @@ function updateAllFilters() {
 }
 
 function updateTransportadoraFilter() {
-    const transportadorasUsadas = new Set();
+    const transportadoras = new Set();
     fretes.forEach(f => {
         if (f.transportadora?.trim()) {
-            transportadorasUsadas.add(f.transportadora.trim());
+            transportadoras.add(f.transportadora.trim());
         }
     });
 
@@ -1347,7 +1319,7 @@ function updateTransportadoraFilter() {
     if (select) {
         const currentValue = select.value;
         select.innerHTML = '<option value="">Todas Transportadoras</option>';
-        Array.from(transportadorasUsadas).sort().forEach(t => {
+        Array.from(transportadoras).sort().forEach(t => {
             const option = document.createElement('option');
             option.value = t;
             option.textContent = t;
