@@ -1016,6 +1016,7 @@ window.showFormModal = function(editingId = null) {
                                         <option value="RODONAVES" ${frete?.transportadora === 'RODONAVES' ? 'selected' : ''}>RODONAVES</option>
                                         <option value="TOTAL EXPRESS" ${frete?.transportadora === 'TOTAL EXPRESS' ? 'selected' : ''}>TOTAL EXPRESS</option>
                                         <option value="ENTREGA PRÓPRIA" ${frete?.transportadora === 'ENTREGA PRÓPRIA' ? 'selected' : ''}>ENTREGA PRÓPRIA</option>
+                                        <option value="CONTINENTAL TRANSPORTADORA" ${frete?.transportadora === 'CONTINENTAL TRANSPORTADORA' ? 'selected' : ''}>CONTINENTAL TRANSPORTADORA</option>
                                         <option value="DIRETO PELO FORNECEDOR" ${frete?.transportadora === 'DIRETO PELO FORNECEDOR' ? 'selected' : ''}>DIRETO PELO FORNECEDOR</option>
                                     </select>
                                 </div>
