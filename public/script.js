@@ -3,7 +3,12 @@
 // ============================================
 const DEVELOPMENT_MODE = false;
 const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
-const API_URL = 'https://controle-frete.onrender.com/api';
+
+// API_URL automático: usa a mesma origem quando rodando no próprio servidor,
+// evitando o problema de apontar para URL errada.
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? `${window.location.protocol}//${window.location.host}/api`
+    : 'https://controle-frete.onrender.com/api';
 
 let fretes = [];
 let transportadoras = [];
@@ -386,10 +391,14 @@ function verificarAutenticacao() {
 
 function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
     document.body.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg-primary); color: var(--text-primary); text-align: center; padding: 2rem;">
-            <h1 style="font-size: 2.2rem; margin-bottom: 1rem;">${mensagem}</h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Somente usuários autenticados podem acessar esta área.</p>
-            <a href="${PORTAL_URL}" style="display: inline-block; background: var(--btn-register); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">Ir para o Portal</a>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0f0f0f;color:#f1f1f1;text-align:center;padding:2rem;font-family:sans-serif;">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" style="margin-bottom:1.5rem"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <h1 style="font-size:1.8rem;margin:0 0 0.75rem;color:#ef4444;">${mensagem}</h1>
+            <p style="color:#9ca3af;margin:0 0 2rem;max-width:380px;line-height:1.6;">
+                Acesse o <strong style="color:#f1f1f1;">Portal I.R. Comércio</strong> e abra o módulo
+                <strong style="color:#f1f1f1;">Controle de Frete</strong> a partir de lá.
+            </p>
+            <a href="${PORTAL_URL}" style="background:#2563eb;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Ir para o Portal</a>
         </div>
     `;
 }
