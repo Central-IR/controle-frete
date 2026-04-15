@@ -16,48 +16,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// MIDDLEWARE DE AUTENTICAÇÃO
-async function authMiddleware(req, res, next) {
-  const sessionToken = req.headers['x-session-token'];
-  if (!sessionToken) {
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-  try {
-    const { data: session, error } = await supabase
-      .from('sessions')
-      .select('username, expires_at')
-      .eq('token', sessionToken)
-      .single();
-    if (error || !session) {
-      return res.status(401).json({ error: 'Sessão inválida' });
-    }
-    if (new Date(session.expires_at) < new Date()) {
-      return res.status(401).json({ error: 'Sessão expirada' });
-    }
-    req.username = session.username;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Erro na autenticação' });
-  }
-}
+// SEM AUTENTICAÇÃO - O Portal já validou o token
+// Só usa o token para saber quem é o usuário, mas não bloqueia
 
-// ROTAS
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-app.get('/api/fretes', authMiddleware, async (req, res) => {
+app.get('/api/fretes', async (req, res) => {
   try {
     const { data, error } = await supabase.from('fretes').select('*').order('numero_nf');
     if (error) throw error;
-    const fretes = data.map(f => ({ ...f, observacoes: f.observacoes ? JSON.parse(f.observacoes) : [] }));
-    res.json(fretes);
+    res.json(data.map(f => ({ ...f, observacoes: f.observacoes ? JSON.parse(f.observacoes) : [] })));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar fretes' });
   }
 });
 
-app.get('/api/fretes/:id', authMiddleware, async (req, res) => {
+app.get('/api/fretes/:id', async (req, res) => {
   try {
     const { data, error } = await supabase.from('fretes').select('*').eq('id', req.params.id).single();
     if (error) return res.status(404).json({ error: 'Não encontrado' });
@@ -67,12 +41,11 @@ app.get('/api/fretes/:id', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/fretes', authMiddleware, async (req, res) => {
+app.post('/api/fretes', async (req, res) => {
   try {
     const frete = req.body;
     frete.observacoes = JSON.stringify(frete.observacoes || []);
     frete.created_at = new Date().toISOString();
-    frete.username = req.username;
     const { data, error } = await supabase.from('fretes').insert(frete).select().single();
     if (error) throw error;
     res.status(201).json({ ...data, observacoes: JSON.parse(data.observacoes) });
@@ -81,7 +54,7 @@ app.post('/api/fretes', authMiddleware, async (req, res) => {
   }
 });
 
-app.put('/api/fretes/:id', authMiddleware, async (req, res) => {
+app.put('/api/fretes/:id', async (req, res) => {
   try {
     const frete = req.body;
     frete.observacoes = JSON.stringify(frete.observacoes || []);
@@ -94,7 +67,7 @@ app.put('/api/fretes/:id', authMiddleware, async (req, res) => {
   }
 });
 
-app.patch('/api/fretes/:id', authMiddleware, async (req, res) => {
+app.patch('/api/fretes/:id', async (req, res) => {
   try {
     const { data, error } = await supabase.from('fretes').update(req.body).eq('id', req.params.id).select().single();
     if (error) return res.status(404).json({ error: 'Não encontrado' });
@@ -104,7 +77,7 @@ app.patch('/api/fretes/:id', authMiddleware, async (req, res) => {
   }
 });
 
-app.delete('/api/fretes/:id', authMiddleware, async (req, res) => {
+app.delete('/api/fretes/:id', async (req, res) => {
   try {
     await supabase.from('fretes').delete().eq('id', req.params.id);
     res.json({ success: true });
@@ -113,7 +86,7 @@ app.delete('/api/fretes/:id', authMiddleware, async (req, res) => {
   }
 });
 
-app.get('/api/transportadoras', authMiddleware, async (req, res) => {
+app.get('/api/transportadoras', async (req, res) => {
   try {
     const { data, error } = await supabase.from('transportadoras').select('*').order('nome');
     if (error) throw error;
@@ -123,7 +96,7 @@ app.get('/api/transportadoras', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/transportadoras', authMiddleware, async (req, res) => {
+app.post('/api/transportadoras', async (req, res) => {
   try {
     const { data, error } = await supabase.from('transportadoras').insert({ nome: req.body.nome.toUpperCase() }).select().single();
     if (error) throw error;
@@ -133,7 +106,7 @@ app.post('/api/transportadoras', authMiddleware, async (req, res) => {
   }
 });
 
-app.delete('/api/transportadoras/:id', authMiddleware, async (req, res) => {
+app.delete('/api/transportadoras/:id', async (req, res) => {
   try {
     await supabase.from('transportadoras').delete().eq('id', req.params.id);
     res.json({ success: true });
@@ -143,12 +116,8 @@ app.delete('/api/transportadoras/:id', authMiddleware, async (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'Rota não encontrada' });
-  }
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Rota não encontrada' });
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`✅ Servidor rodando na porta ${port}`);
-});
+app.listen(port, () => console.log(`✅ Rodando na porta ${port}`));
