@@ -1563,6 +1563,7 @@ function getTipoNfLabel(tipo) {
         'REMESSA_AMOSTRA': 'Remessa de Amostra',
         'SIMPLES_REMESSA': 'Simples Remessa',
         'DEVOLUCAO': 'Devolução'
+        'DEVOLVIDA': 'Devolvida'
     };
     return labels[tipo] || tipo || 'Envio';
 }
