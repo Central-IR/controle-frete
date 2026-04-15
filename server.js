@@ -8,6 +8,9 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// ============================================
+// MIDDLEWARES
+// ============================================
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -15,6 +18,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Servir arquivos estáticos da pasta public (IMPORTANTE: deve vir ANTES das rotas)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================
 // SUPABASE CLIENT
@@ -391,12 +397,20 @@ function sanitizarFrete(body) {
 }
 
 // ============================================
-// FALLBACK — SERVIR INDEX.HTML
+// FALLBACK - APENAS PARA ROTAS NÃO ENCONTRADAS
 // ============================================
 app.get('*', (req, res) => {
+  // Não interceptar arquivos estáticos (js, css, png, etc)
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|json)$/)) {
+    return res.status(404).json({ error: 'Arquivo não encontrado' });
+  }
+  
+  // Para rotas de API, retornar 404
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Rota não encontrada' });
   }
+  
+  // Para todas as outras rotas, servir o index.html
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -404,7 +418,10 @@ app.get('*', (req, res) => {
 // START SERVER
 // ============================================
 app.listen(port, () => {
+  console.log('='.repeat(50));
   console.log(`✅ Servidor do Controle de Frete rodando na porta ${port}`);
   console.log(`📍 API disponível em http://localhost:${port}/api`);
+  console.log(`📁 Servindo arquivos estáticos da pasta: ${path.join(__dirname, 'public')}`);
   console.log(`🔧 Modo desenvolvimento: ${process.env.DEVELOPMENT_MODE === 'true'}`);
+  console.log('='.repeat(50));
 });
