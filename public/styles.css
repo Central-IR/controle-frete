@@ -776,6 +776,12 @@ tbody tr.row-entregue:hover {
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.badge.devolvida {
+    background: rgba(239, 68, 68, 0.1);
+    color: #DC2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
 .badge.cancelado, .badge.badge-especial {
     background: rgba(107, 114, 128, 0.1);
     color: #4B5563;
