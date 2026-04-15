@@ -1575,7 +1575,7 @@ function getStatusBadgeForRender(frete) {
         return `<span class="badge badge-especial">${tipoLabel.toUpperCase()}</span>`;
     }
     
-    const tiposEspeciais = ['CANCELADA', 'DEVOLUCAO'];
+    const tiposEspeciais = ['CANCELADA', 'DEVOLUCAO', 'DEVOLVIDA'];
     if (tiposEspeciais.includes(frete.tipo_nf)) {
         const tipoLabel = getTipoNfLabel(frete.tipo_nf);
         return `<span class="badge badge-especial">${tipoLabel.toUpperCase()}</span>`;
