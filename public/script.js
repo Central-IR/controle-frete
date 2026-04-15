@@ -967,6 +967,7 @@ window.showFormModal = function(editingId = null) {
                                         <option value="REMESSA_AMOSTRA" ${frete?.tipo_nf === 'REMESSA_AMOSTRA' ? 'selected' : ''}>Remessa de Amostra</option>
                                         <option value="SIMPLES_REMESSA" ${frete?.tipo_nf === 'SIMPLES_REMESSA' ? 'selected' : ''}>Simples Remessa</option>
                                         <option value="DEVOLUCAO" ${frete?.tipo_nf === 'DEVOLUCAO' ? 'selected' : ''}>Devolução</option>
+                                        <option value="DEVOLVIDA" ${frete?.tipo_nf === 'DEVOLVIDA' ? 'selected' : ''}>Devolvida</option>
                                     </select>
                                 </div>
                             </div>
