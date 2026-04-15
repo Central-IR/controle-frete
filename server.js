@@ -8,7 +8,12 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token'],
+  credentials: true
+}));
 app.use(express.json());
 
 // ============================================
@@ -20,7 +25,7 @@ const supabase = createClient(
 );
 
 // ============================================
-// MIDDLEWARE DE AUTENTICAÇÃO
+// MIDDLEWARE DE AUTENTICAÇÃO (CORRIGIDO)
 // ============================================
 async function authMiddleware(req, res, next) {
   // Em desenvolvimento, pula autenticação
@@ -36,22 +41,43 @@ async function authMiddleware(req, res, next) {
   }
 
   try {
-    // Valida o token na tabela de sessões do portal
+    // Valida o token na tabela active_sessions (igual ao Portal)
     const { data: session, error } = await supabase
-      .from('sessions')
-      .select('username, expires_at')
-      .eq('token', sessionToken)
+      .from('active_sessions')
+      .select(`
+        *,
+        users:user_id (
+          username,
+          name,
+          sector,
+          is_admin,
+          is_active
+        )
+      `)
+      .eq('session_token', sessionToken)
+      .eq('is_active', true)
       .single();
 
     if (error || !session) {
+      console.error('❌ Sessão não encontrada:', error);
       return res.status(401).json({ error: 'Sessão inválida ou expirada' });
     }
 
+    // Verifica se o usuário está ativo
+    if (!session.users?.is_active) {
+      return res.status(401).json({ error: 'Usuário inativo' });
+    }
+
+    // Verifica expiração
     if (new Date(session.expires_at) < new Date()) {
+      await supabase
+        .from('active_sessions')
+        .update({ is_active: false })
+        .eq('session_token', sessionToken);
       return res.status(401).json({ error: 'Sessão expirada' });
     }
 
-    req.username = session.username;
+    req.username = session.users.username;
     next();
   } catch (err) {
     console.error('Erro no middleware de auth:', err);
@@ -63,13 +89,13 @@ async function authMiddleware(req, res, next) {
 // HEALTH CHECK (sem autenticação)
 // ============================================
 app.get('/health', (req, res) => {
-res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
 // ============================================
 // ROTAS DE TRANSPORTADORAS
 // ============================================
 
-// GET /api/transportadoras — Lista todas as transportadoras
 app.get('/api/transportadoras', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -79,7 +105,6 @@ app.get('/api/transportadoras', authMiddleware, async (req, res) => {
 
     if (error) throw error;
 
-    // Retorna array de strings com os nomes
     const nomes = data.map(t => t.nome);
     res.json(nomes);
   } catch (err) {
@@ -88,7 +113,6 @@ app.get('/api/transportadoras', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/transportadoras — Adiciona nova transportadora
 app.post('/api/transportadoras', authMiddleware, async (req, res) => {
   try {
     const { nome } = req.body;
@@ -112,7 +136,6 @@ app.post('/api/transportadoras', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/transportadoras/:id — Remove transportadora
 app.delete('/api/transportadoras/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -135,7 +158,6 @@ app.delete('/api/transportadoras/:id', authMiddleware, async (req, res) => {
 // ROTAS DE FRETES
 // ============================================
 
-// GET /api/fretes — Lista todos os fretes
 app.get('/api/fretes', authMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -145,7 +167,6 @@ app.get('/api/fretes', authMiddleware, async (req, res) => {
 
     if (error) throw error;
 
-    // Garante que observacoes seja retornado como array
     const fretes = data.map(f => ({
       ...f,
       observacoes: parseObservacoes(f.observacoes)
@@ -158,7 +179,6 @@ app.get('/api/fretes', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/fretes/:id — Busca um frete por ID
 app.get('/api/fretes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -183,12 +203,10 @@ app.get('/api/fretes/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/fretes — Cria novo frete
 app.post('/api/fretes', authMiddleware, async (req, res) => {
   try {
     const freteData = sanitizarFrete(req.body);
 
-    // Validações obrigatórias
     if (!freteData.numero_nf) {
       return res.status(400).json({ error: 'Número da NF é obrigatório' });
     }
@@ -199,7 +217,6 @@ app.post('/api/fretes', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Data de coleta é obrigatória' });
     }
 
-    // Define status inicial
     if (!freteData.status) {
       const tiposComStatus = ['ENVIO', 'SIMPLES_REMESSA', 'REMESSA_AMOSTRA'];
       freteData.status = tiposComStatus.includes(freteData.tipo_nf) ? 'EM_TRANSITO' : null;
@@ -226,7 +243,6 @@ app.post('/api/fretes', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/fretes/:id — Atualiza frete completo
 app.put('/api/fretes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -257,13 +273,11 @@ app.put('/api/fretes/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// PATCH /api/fretes/:id — Atualiza campos específicos (ex: status, data_entrega)
 app.patch('/api/fretes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    // Permite apenas campos seguros no PATCH
     const allowedFields = ['status', 'data_entrega', 'observacoes'];
     const filteredUpdates = {};
     allowedFields.forEach(field => {
@@ -301,7 +315,6 @@ app.patch('/api/fretes/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE /api/fretes/:id — Deleta frete
 app.delete('/api/fretes/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -324,9 +337,6 @@ app.delete('/api/fretes/:id', authMiddleware, async (req, res) => {
 // FUNÇÕES AUXILIARES
 // ============================================
 
-/**
- * Garante que observacoes seja sempre um array válido
- */
 function parseObservacoes(obs) {
   if (!obs) return [];
   if (Array.isArray(obs)) return obs;
@@ -338,13 +348,9 @@ function parseObservacoes(obs) {
   }
 }
 
-/**
- * Sanitiza e normaliza os dados do frete antes de salvar
- */
 function sanitizarFrete(body) {
   const frete = { ...body };
 
-  // Campos de texto — converte para uppercase e limpa
   const camposTexto = ['numero_nf', 'documento', 'nome_orgao', 'contato_orgao',
                        'vendedor', 'transportadora', 'cidade_destino'];
   camposTexto.forEach(campo => {
@@ -353,11 +359,9 @@ function sanitizarFrete(body) {
     }
   });
 
-  // Campos numéricos
   frete.valor_nf = frete.valor_nf ? parseFloat(frete.valor_nf) : 0;
   frete.valor_frete = frete.valor_frete ? parseFloat(frete.valor_frete) : 0;
 
-  // Campos de data — converte string vazia para null
   const camposData = ['data_emissao', 'data_coleta', 'previsao_entrega', 'data_entrega'];
   camposData.forEach(campo => {
     if (!frete[campo] || frete[campo] === '') {
@@ -365,16 +369,14 @@ function sanitizarFrete(body) {
     }
   });
 
-  // Tipo NF padrão
   if (!frete.tipo_nf) {
     frete.tipo_nf = 'ENVIO';
   }
 
-  // Observacoes — garante que seja string JSON para o banco
   if (frete.observacoes) {
     if (typeof frete.observacoes === 'string') {
       try {
-        JSON.parse(frete.observacoes); // valida se é JSON válido
+        JSON.parse(frete.observacoes);
       } catch {
         frete.observacoes = '[]';
       }
@@ -389,10 +391,9 @@ function sanitizarFrete(body) {
 }
 
 // ============================================
-// FALLBACK — SERVIR INDEX.HTML PARA SPA
+// FALLBACK — SERVIR INDEX.HTML
 // ============================================
 app.get('*', (req, res) => {
-  // Não interceptar rotas de API
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Rota não encontrada' });
   }
@@ -403,7 +404,7 @@ app.get('*', (req, res) => {
 // START SERVER
 // ============================================
 app.listen(port, () => {
-    console.log(`✅ Servidor rodando na porta ${port}`);
+  console.log(`✅ Servidor do Controle de Frete rodando na porta ${port}`);
   console.log(`📍 API disponível em http://localhost:${port}/api`);
   console.log(`🔧 Modo desenvolvimento: ${process.env.DEVELOPMENT_MODE === 'true'}`);
 });
