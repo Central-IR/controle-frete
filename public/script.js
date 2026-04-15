@@ -1601,6 +1601,7 @@ function getStatusBadge(status) {
         'EM_TRANSITO': { class: 'transito', text: 'Em Trânsito' },
         'ENTREGUE': { class: 'entregue', text: 'Entregue' },
         'DEVOLUCAO': { class: 'devolvido', text: 'Devolução' },
+        'DEVOLVIDA': { class: 'devolvida', text: 'Devolvida' }
         'SIMPLES_REMESSA': { class: 'cancelado', text: 'Simples Remessa' },
         'REMESSA_AMOSTRA': { class: 'cancelado', text: 'Remessa de Amostra' },
         'CANCELADO': { class: 'cancelado', text: 'Cancelada' }
