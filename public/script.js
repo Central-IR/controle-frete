@@ -18,7 +18,7 @@ const meses = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-const mesesAbrev = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+const mesesAbrev = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEV'];
 
 console.log('✅ Controle de Frete iniciado');
 console.log('📍 API URL:', API_URL);
@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventDelegation() {
     console.log('🔧 Configurando Event Delegation...');
     
-    // Listener para checkboxes via event delegation
     document.body.addEventListener('change', function(e) {
         if (e.target.type === 'checkbox' && e.target.classList.contains('styled-checkbox')) {
             const row = e.target.closest('tr[data-id]');
@@ -103,7 +102,6 @@ window.handleDeleteClick = async function(id) {
         const numeroNF = freteToDelete.numero_nf || 'sem número';
         console.log('📋 Frete encontrado - NF:', numeroNF);
         
-        // Verificar se showConfirm existe
         if (typeof window.showConfirm !== 'function') {
             console.error('❌ showConfirm não está definido!');
             const confirmar = confirm(`Tem certeza que deseja excluir esta NF?`);
@@ -111,7 +109,6 @@ window.handleDeleteClick = async function(id) {
         } else {
             console.log('✅ Abrindo modal de confirmação...');
             
-            // Usar modal de confirmação personalizado
             const confirmar = await window.showConfirm(
                 `Tem certeza que deseja excluir esta NF?`,
                 {
@@ -131,14 +128,12 @@ window.handleDeleteClick = async function(id) {
         console.log('✅ Usuário confirmou exclusão');
         console.log('🗑️ Deletando NF:', numeroNF);
         
-        // Remover da lista local primeiro
         fretes = fretes.filter(f => String(f.id) !== idStr);
         updateAllFilters();
         updateDashboard();
         filterFretes();
         showToast(`NF ${numeroNF} Excluído`, 'success');
         
-        // Deletar no servidor
         if (isOnline || DEVELOPMENT_MODE) {
             fetch(`${API_URL}/fretes/${idStr}`, {
                 method: 'DELETE',
@@ -154,7 +149,6 @@ window.handleDeleteClick = async function(id) {
             })
             .catch(error => {
                 console.error('❌ Erro ao deletar no servidor:', error);
-                // Restaurar o frete se falhar no servidor
                 if (freteToDelete) {
                     fretes.push(freteToDelete);
                     updateAllFilters();
@@ -185,17 +179,14 @@ window.handleCheckboxChange = async function(id) {
     
     const novoStatus = frete.status === 'ENTREGUE' ? 'EM_TRANSITO' : 'ENTREGUE';
     
-    // Preparar dados para atualização
     const updateData = { status: novoStatus };
     
-    // Se está marcando como ENTREGUE e não tem data_entrega, define a data atual
     if (novoStatus === 'ENTREGUE' && !frete.data_entrega) {
         const hoje = new Date();
         updateData.data_entrega = hoje.toISOString().split('T')[0];
         console.log(`📅 Definindo data_entrega: ${updateData.data_entrega}`);
     }
     
-    // Se está desmarcando (voltando para EM_TRANSITO), REMOVE a data_entrega
     if (novoStatus === 'EM_TRANSITO') {
         updateData.data_entrega = null;
         console.log('🗑️ Removendo data_entrega (desmarcado)');
@@ -691,7 +682,6 @@ function renderizarGrafico() {
     const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     
-    // Calcular dados por mês
     const dadosPorMes = months.map((nome, index) => {
         const fretesDoMes = fretes.filter(f => {
             const dataEmissao = new Date(f.data_emissao + 'T00:00:00');
@@ -707,14 +697,12 @@ function renderizarGrafico() {
         return { nome, valorFrete, valorTotal };
     });
     
-    // Paginação - 3 meses por página
     const mesesPorPagina = 3;
     const totalPaginas = Math.ceil(dadosPorMes.length / mesesPorPagina);
     const inicio = (graficoPagina - 1) * mesesPorPagina;
     const fim = inicio + mesesPorPagina;
     const mesesPagina = dadosPorMes.slice(inicio, fim);
     
-    // Calcular totais gerais do ano inteiro
     const totalFrete = dadosPorMes.reduce((sum, m) => sum + m.valorFrete, 0);
     const totalValor = dadosPorMes.reduce((sum, m) => sum + m.valorTotal, 0);
     
@@ -727,19 +715,16 @@ function renderizarGrafico() {
                 const mesIndex = inicio + indexPagina;
                 const mesAnterior = mesIndex > 0 ? dadosPorMes[mesIndex - 1] : null;
                 
-                // Calcular tendências
                 let freteTendencia = '';
                 let totalTendencia = '';
                 
                 if (mesAnterior) {
-                    // Tendência Frete
                     if (mes.valorFrete > mesAnterior.valorFrete) {
                         freteTendencia = '<span style="color: #22C55E; font-size: 1.2rem; margin-left: 0.25rem;">▲</span>';
                     } else if (mes.valorFrete < mesAnterior.valorFrete) {
                         freteTendencia = '<span style="color: #EF4444; font-size: 1.2rem; margin-left: 0.25rem;">▼</span>';
                     }
                     
-                    // Tendência Valor Total
                     if (mes.valorTotal > mesAnterior.valorTotal) {
                         totalTendencia = '<span style="color: #22C55E; font-size: 1.2rem; margin-left: 0.25rem;">▲</span>';
                     } else if (mes.valorTotal < mesAnterior.valorTotal) {
@@ -788,10 +773,6 @@ function renderizarGrafico() {
     `;
 }
 
-function renderizarDashboards(dadosMensais) {
-    // Função removida - agora integrada em renderizarGrafico
-}
-
 // ============================================
 // MODAL DE CONFIRMAÇÃO
 // ============================================
@@ -820,7 +801,6 @@ function showConfirm(message, options = {}) {
         const cancelBtn = document.getElementById('modalCancelBtn');
         const closeBtn = document.getElementById('confirmModalClose');
 
-        // Forçar display do modal
         if (modal) {
             modal.style.display = 'flex';
             modal.style.opacity = '1';
@@ -842,7 +822,6 @@ function showConfirm(message, options = {}) {
         if (cancelBtn) cancelBtn.addEventListener('click', () => closeModal(false));
         if (closeBtn) closeBtn.addEventListener('click', () => closeModal(false));
         
-        // Fechar ao clicar fora do modal
         if (modal) {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -860,7 +839,6 @@ function showConfirm(message, options = {}) {
     });
 }
 
-// Exportar para window
 window.showConfirm = showConfirm;
 
 // ============================================
@@ -1114,7 +1092,6 @@ window.adicionarObservacao = function() {
     const observacoesDataField = document.getElementById('observacoesData');
     let observacoes = JSON.parse(observacoesDataField.value || '[]');
     
-    // Adicionar username à observação
     const username = sessionStorage.getItem('username') || 'Usuário';
     
     observacoes.push({
@@ -1228,12 +1205,6 @@ window.handleSubmit = async function(event) {
         data_entrega: document.getElementById('data_entrega').value || null,
         observacoes: observacoesValue
     };
-
-    // O backend vai calcular o status automaticamente baseado em:
-    // 1. tipo_nf (se for tipo especial, status = null)
-    // 2. data_entrega (se existir, status = ENTREGUE)
-    // 3. padrão (se não tiver data_entrega, status = EM_TRANSITO)
-    // Não enviamos status no formData para deixar o backend decidir
 
     const editId = document.getElementById('editId').value;
 
@@ -1562,7 +1533,7 @@ function getTipoNfLabel(tipo) {
         'CANCELADA': 'Cancelada',
         'REMESSA_AMOSTRA': 'Remessa de Amostra',
         'SIMPLES_REMESSA': 'Simples Remessa',
-        'DEVOLUCAO': 'Devolução'
+        'DEVOLUCAO': 'Devolução',
         'DEVOLVIDA': 'Devolvida'
     };
     return labels[tipo] || tipo || 'Envio';
@@ -1601,7 +1572,7 @@ function getStatusBadge(status) {
         'EM_TRANSITO': { class: 'transito', text: 'Em Trânsito' },
         'ENTREGUE': { class: 'entregue', text: 'Entregue' },
         'DEVOLUCAO': { class: 'devolvido', text: 'Devolução' },
-        'DEVOLVIDA': { class: 'devolvida', text: 'Devolvida' }
+        'DEVOLVIDA': { class: 'devolvida', text: 'Devolvida' },
         'SIMPLES_REMESSA': { class: 'cancelado', text: 'Simples Remessa' },
         'REMESSA_AMOSTRA': { class: 'cancelado', text: 'Remessa de Amostra' },
         'CANCELADO': { class: 'cancelado', text: 'Cancelada' }
@@ -1751,9 +1722,6 @@ window.addEventListener('beforeunload', () => {
     sessionStorage.removeItem('alertShown');
 });
 
-// ============================================
-// LOG FINAL
-// ============================================
 console.log('✅ Script completo carregado com sucesso!');
 console.log('🔧 Funções exportadas para window:', {
     toggleForm: typeof window.toggleForm,
